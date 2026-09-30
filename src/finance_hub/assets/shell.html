@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Personal Finance</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/assets/theme.css">
+<link rel="stylesheet" href="/assets/budget.css">
+<link rel="stylesheet" href="/assets/budget-plan.css">
+<link rel="stylesheet" href="/assets/portfolio.css">
+<link rel="stylesheet" href="/assets/retirement.css">
+<link rel="stylesheet" href="/assets/journal.css">
+</head>
+<body>
+<header class="hub-top">
+  <div><div class="eyebrow">Personal finance</div><h1>Dashboard</h1></div>
+  <nav class="hub-nav" id="hub-nav">
+    <button data-view="budget" class="active">Report</button>
+    <button data-view="budget-plan">Budget</button>
+    <button data-view="portfolio">Portfolio</button>
+    <button data-view="retirement">Retirement</button>
+    <button data-view="journal">Journal</button>
+  </nav>
+</header>
+
+<section id="view-budget-plan" class="hub-view view-budget-plan">
+  <div class="shell">
+    <header class="top">
+      <div>
+        <div class="eyebrow">Budget</div>
+        <h1>Plan the year</h1>
+        <div class="sub" id="bp-status"></div>
+      </div>
+      <div class="controls">
+        <div class="year-switch">
+          <button type="button" id="bp-prev-year" aria-label="Previous year">‹</button>
+          <span class="year-label" id="bp-year-label"></span>
+          <button type="button" id="bp-next-year" aria-label="Next year">›</button>
+        </div>
+        <button type="button" class="bp-button" id="bp-fill-suggestions">Fill blanks with suggestions</button>
+        <button type="button" class="bp-button primary" id="bp-save">Save changes</button>
+        <span class="unsaved-indicator" id="bp-unsaved" hidden>Unsaved changes</span>
+      </div>
+    </header>
+    <div class="bp-summary" id="bp-summary">
+      <div class="bp-stat"><span class="bp-stat-label">Total income</span><span class="bp-stat-value" id="bp-total-income">—</span></div>
+      <div class="bp-stat"><span class="bp-stat-label">Total expenses</span><span class="bp-stat-value" id="bp-total-expenses">—</span></div>
+      <div class="bp-stat"><span class="bp-stat-label">Net</span><span class="bp-stat-value" id="bp-net">—</span></div>
+    </div>
+    <div class="table-wrap">
+      <table id="bp-table" class="bp-grid"></table>
+    </div>
+  </div>
+</section>
+
+<section id="view-budget" class="hub-view view-budget active">
+  <div class="shell">
+    <header class="top">
+      <div>
+        <div class="sub" id="asof"></div>
+        <div class="window-error" id="window-error"></div>
+      </div>
+      <div class="controls">
+        <div class="control" id="period-control"><label class="label">Report month</label><input type="month" id="period"></div>
+        <div class="custom-controls" id="custom-controls">
+          <div class="control"><label class="label">From month</label><input type="month" id="custom-start"></div>
+          <div class="control"><label class="label">To month</label><input type="month" id="custom-end"></div>
+        </div>
+        <div class="control"><label class="label">View</label>
+          <div class="switch">
+            <button data-mode="monthly" class="active">Month</button>
+            <button data-mode="ytd">Year to date</button>
+            <button data-mode="yoy">YoY</button>
+            <button data-mode="custom">Custom</button>
+          </div>
+        </div>
+        <div class="custom-controls" id="yoy-controls">
+          <div class="control"><label class="label">YoY period</label>
+            <div class="switch">
+              <button data-yoy-basis="monthly" class="active">Monthly</button>
+              <button data-yoy-basis="ytd">Year to date</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <section class="cards">
+      <div class="card income-card">
+        <div class="label">Income sources</div>
+        <div class="income-sources">
+          <button type="button" class="income-source drill-trigger" id="income-drill"><span class="source-name">Operating income</span><span class="value" id="income"></span><span class="compare" id="income-cmp"></span></button>
+          <button type="button" class="income-source drill-trigger" id="investment-income-drill"><span class="source-name">Investment gain / loss</span><span class="value" id="investment-income"></span><span class="compare" id="investment-income-cmp"></span></button>
+        </div>
+        <div class="income-combined"><span>Combined economic income</span><strong id="income-combined"></strong></div>
+      </div>
+      <button type="button" class="card drill-trigger" id="spending-drill"><span class="label">Spending</span><span class="value" id="spending"></span><span class="compare" id="spending-cmp"></span></button>
+      <div class="card"><div class="label">Operating surplus / deficit</div><div class="value" id="surplus"></div><div class="compare" id="surplus-cmp"></div></div>
+      <div class="card"><div class="label">Savings rate</div><div class="value" id="saving-rate"></div><div class="rate-basis">of operating income</div><div class="compare" id="saving-cmp"></div></div>
+      <div class="card"><div class="label">Net worth</div><div class="value" id="networth"></div><div class="compare" id="networth-cmp"></div></div>
+    </section>
+    <section class="grid">
+      <div class="panel"><div class="title-row"><div class="panel-title" id="trend-title">Monthly cash flow</div><div class="legend-note" id="trend-note">Actual operating income and spending</div></div><div class="chart"><canvas id="trend-chart"></canvas></div></div>
+      <div class="panel"><div class="title-row"><div class="panel-title">Where spending went</div><div class="legend-note" id="spend-total"></div></div><div class="spending-layout"><div class="chart"><canvas id="spending-chart"></canvas></div><div class="spending-legend" id="spending-legend" aria-label="Spending categories"></div></div></div>
+    </section>
+    <section class="grid">
+      <div class="panel"><div class="title-row"><div class="panel-title" id="category-title">Budget vs actual</div><div class="tabs"><button class="tab active" data-kind="expense">Expenses</button><button class="tab" data-kind="income">Income</button></div></div><div class="chart tall"><canvas id="category-chart"></canvas></div></div>
+      <div class="panel"><div class="title-row"><div class="panel-title">Category detail</div><div class="legend-note" id="category-note">Positive variance is favourable</div></div><div class="table-wrap"><table><thead><tr>
+        <th aria-sort="none"><button type="button" class="sort-heading" data-detail-sort="category">Category</button></th>
+        <th class="right" aria-sort="descending"><button type="button" class="sort-heading" data-detail-sort="actual"><span id="detail-current">Actual</span></button></th>
+        <th class="right" aria-sort="none"><button type="button" class="sort-heading" data-detail-sort="compare"><span id="detail-compare">Budget</span></button></th>
+        <th class="right" aria-sort="none"><button type="button" class="sort-heading" data-detail-sort="delta"><span id="detail-delta">Variance</span></button></th>
+      </tr></thead><tbody id="category-body"></tbody></table></div></div>
+    </section>
+    <section class="grid">
+      <div class="panel"><div class="title-row"><div class="panel-title">Net worth history</div><div class="legend-note">At each month end</div></div><div class="chart"><canvas id="networth-chart"></canvas></div></div>
+      <div class="panel"><div class="title-row"><div class="panel-title">Balance sheet</div><div class="legend-note" id="balance-date"></div></div><div class="accounts"><div><div class="label">Assets</div><div class="account-total" id="asset-total"></div><div id="assets"></div></div><div><div class="label">Liabilities</div><div class="account-total" id="liability-total"></div><div id="liabilities"></div></div></div></div>
+    </section>
+    <div class="footer" id="footer"></div>
+  </div>
+  <div class="tx-backdrop" id="tx-backdrop" hidden>
+    <aside class="tx-drawer" role="dialog" aria-modal="true" aria-labelledby="tx-title">
+      <header class="tx-head"><div><div class="eyebrow">Journal detail</div><h2 id="tx-title">Transactions</h2><div class="tx-summary" id="tx-summary"></div></div><button type="button" class="tx-close" id="tx-close" aria-label="Close transaction detail">×</button></header>
+      <div class="tx-filters">
+        <label>From<input type="date" id="tx-start"></label>
+        <label>To<input type="date" id="tx-end"></label>
+        <label>Category<select id="tx-category"></select></label>
+        <label>Account<select id="tx-account"></select></label>
+        <label class="tx-search">Search<input type="search" id="tx-search" placeholder="Date, account, or note"></label>
+      </div>
+      <div class="tx-error" id="tx-error"></div>
+      <div class="tx-table-wrap"><table><thead><tr><th>Row</th><th>Date</th><th>Debit</th><th>Credit</th><th class="right">Amount</th><th class="right">Impact</th><th>Note</th></tr></thead><tbody id="tx-body"></tbody></table></div>
+      <footer class="tx-footer"><span id="tx-page-summary"></span><div><button type="button" id="tx-prev">Previous</button><button type="button" id="tx-next">Next</button></div></footer>
+    </aside>
+  </div>
+</section>
+
+<section id="view-portfolio" class="hub-view view-portfolio">
+  <div class="refresh-row">
+    <button class="refresh-button" id="pf-refresh">Refresh from LSEG</button>
+    <span class="refresh-status" id="pf-refresh-status"></span>
+  </div>
+  <pre class="refresh-log" id="pf-refresh-log" style="display:none"></pre>
+
+  <div id="pf-empty" class="empty-state" style="display:none">No cached portfolio data yet. Open LSEG Workspace and press Refresh above to run the pipeline.</div>
+
+  <div id="pf-content" style="display:none">
+    <div class="cards-header">
+      <span class="info-icon" tabindex="0">i<span class="info-tooltip">Since-Inception, 1Y, and YTD figures are money-weighted returns: they reflect the return on your actual invested dollars, accounting for when you contributed or withdrew cash. The Return Window and Performance by Horizon sections below use time-weighted returns instead, which strip out contribution timing so they're fair for comparing against the benchmark.</span></span>
+    </div>
+    <div class="cards">
+      <div class="card"><div class="card-label">Total Portfolio Value</div><div class="card-value" id="total-value"></div><div class="as-of" id="as-of"></div></div>
+      <div class="card"><div class="card-label">Accrued Gain</div><div class="card-value" id="gain-badge"></div></div>
+      <div class="card"><div class="card-label">Since-Inception Annualized Return</div><div class="card-value" id="card-total-return">—</div></div>
+      <div class="card"><div class="card-label">1Y Return</div><div class="card-value" id="card-one-year">—</div></div>
+      <div class="card"><div class="card-label">YTD Return</div><div class="card-value" id="card-ytd"></div></div>
+      <div class="card"><div class="card-label">Sharpe Ratio</div><div class="card-value" id="card-sharpe"></div></div>
+      <div class="card"><div class="card-label">Total Cost Base</div><div class="card-value" id="card-cost-base"></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title-row">
+        <div class="section-title">Return Window</div>
+        <span class="info-icon" tabindex="0">i<span class="info-tooltip">This window uses time-weighted returns, which exclude the effect of contribution and withdrawal timing — the standard basis for comparing your portfolio against the benchmark blend.</span></span>
+      </div>
+      <div class="method-note" id="benchmark-method"></div>
+      <div class="window-controls">
+        <label>From<input type="date" id="window-start"></label>
+        <label>To<input type="date" id="window-end"></label>
+        <div class="quick-ranges">
+          <button class="range-button" data-range="ytd">YTD</button>
+          <button class="range-button" data-range="1y">1Y</button>
+          <button class="range-button" data-range="3y">3Y</button>
+          <button class="range-button" data-range="5y">5Y</button>
+          <button class="range-button" data-range="all">Since inception</button>
+        </div>
+      </div>
+      <div class="window-error" id="pf-window-error"></div>
+      <div class="window-results">
+        <div class="window-result"><div class="card-label">Portfolio Annualized Return</div><div class="card-value" id="window-portfolio"></div></div>
+        <div class="window-result"><div class="card-label">Benchmark Annualized Return</div><div class="card-value" id="window-benchmark"></div></div>
+        <div class="window-result"><div class="card-label">Annualized Difference</div><div class="card-value" id="window-difference"></div></div>
+        <div class="window-result"><div class="card-label">Portfolio Period Return</div><div class="card-value" id="window-period"></div></div>
+      </div>
+      <div class="chart-wrap"><canvas id="return-window-chart"></canvas></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title-row">
+        <div class="section-title">Performance by Horizon</div>
+        <span class="info-icon" tabindex="0">i<span class="info-tooltip">These figures use time-weighted returns, which exclude the effect of contribution and withdrawal timing — the standard basis for comparing your portfolio against the benchmark blend.</span></span>
+      </div>
+      <div class="method-note">Contributions and withdrawals are excluded so horizons are directly comparable. YTD is cumulative; 1Y, 3Y, 5Y, and since-inception returns are annualized.</div>
+      <div class="table-wrap">
+        <table class="detail-table" id="performance-table">
+          <thead><tr>
+            <th>Horizon</th>
+            <th>Return Basis</th>
+            <th class="right">Portfolio Return</th>
+            <th class="right">Benchmark Return</th>
+            <th class="right">Difference</th>
+          </tr></thead>
+          <tbody id="performance-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Risk &amp; Benchmark Statistics</div>
+      <div class="method-note">Risk statistics use daily time-weighted returns, so contributions do not distort volatility or benchmark-relative measures. Annualization uses 252 trading days.</div>
+      <div class="stats-grid" id="risk-grid"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Portfolio Value (CAD)</div>
+      <div class="chart-wrap"><canvas id="value-chart"></canvas></div>
+    </div>
+
+    <div class="two-col">
+      <div class="section" style="margin-bottom:0">
+        <div class="section-title">Asset Allocation</div>
+        <div class="method-note">Unknown, Other, and Not Classified buckets are excluded; the remaining displayed allocation is normalized to 100%.</div>
+        <div class="tabs" id="exp-tabs">
+          <button class="tab active" data-key="asset_class">Asset Class</button>
+          <button class="tab" data-key="geography">Geography</button>
+          <button class="tab" data-key="sector">Sector</button>
+        </div>
+        <div class="chart-wrap-sm"><canvas id="alloc-chart"></canvas></div>
+      </div>
+      <div class="section" style="margin-bottom:0">
+        <div class="section-title">Account Breakdown</div>
+        <div class="chart-wrap-sm"><canvas id="account-chart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="holdings-header">
+        <div class="section-title">Holdings</div>
+        <div class="holdings-controls">
+          <div class="holdings-summary" id="holdings-summary"></div>
+          <label>Account<select id="account-filter"><option value="">All accounts</option></select></label>
+        </div>
+      </div>
+      <table id="holdings-table">
+        <thead><tr>
+          <th data-col="ticker">Ticker</th>
+          <th data-col="name">Name</th>
+          <th data-col="units" class="right">Units</th>
+          <th data-col="price_cad" class="right">Price (CAD)</th>
+          <th data-col="value_cad" class="right">Value (CAD)</th>
+          <th data-col="total_acb" class="right">Cost Base</th>
+          <th data-col="accrued_gain_cad" class="right">Gain $</th>
+          <th data-col="accrued_gain_pct" class="right">Gain %</th>
+          <th data-col="weight" class="right">Weight</th>
+        </tr></thead>
+        <tbody id="holdings-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="view-retirement" class="hub-view view-retirement">
+  <div class="retirement-shell">
+    <header class="retirement-top">
+      <div>
+        <h2>Retirement planner</h2>
+        <div class="retirement-sub">A 10,000-path probability range, with fixed-return stress cases for context.</div>
+      </div>
+      <button type="button" class="secondary-button" id="rt-reset">Reset to live data</button>
+    </header>
+
+    <div class="source-cards">
+      <div class="source-card"><div class="label">Current portfolio</div><div class="source-value" id="rt-source-portfolio">—</div><div class="source-note" id="rt-portfolio-asof"></div></div>
+      <div class="source-card"><div class="label">YTD spending</div><div class="source-value" id="rt-source-ytd">—</div><div class="source-note" id="rt-budget-asof"></div></div>
+      <div class="source-card"><div class="label">Annualized spending</div><div class="source-value" id="rt-source-annualized">—</div><div class="source-note" id="rt-annualization-note"></div></div>
+      <div class="source-card" id="rt-tax-exempt-card"><div class="label">Tax-exempt amount</div><div class="source-value" id="rt-tax-exempt-total">—</div><div class="source-note" id="rt-tax-exempt-share">— of portfolio</div></div>
+    </div>
+
+    <div class="source-status" id="rt-source-status"></div>
+    <button type="button" class="text-button" id="rt-open-portfolio">Open Portfolio to refresh</button>
+    <div class="forecast-error" id="rt-error"></div>
+
+    <div class="retirement-grid">
+      <section class="retirement-panel">
+        <div class="panel-title">Assumptions</div>
+        <div class="panel-note">Values are saved in this browser. Percentages are annual rates.</div>
+        <form class="assumption-grid" id="rt-form">
+          <label>Starting portfolio<input id="rt-portfolio" type="text" inputmode="decimal" autocomplete="off" data-money required></label>
+          <label>Base annual spending<input id="rt-spending" type="text" inputmode="decimal" autocomplete="off" data-money required></label>
+          <label>Additional base annual retirement income<input id="rt-income" type="text" inputmode="decimal" autocomplete="off" data-money required></label>
+          <label>Date of birth<input id="rt-birth-date" type="date"></label>
+          <label>Retirement start date<input id="rt-start-date" type="date" required><span class="assumption-input-note" id="rt-retirement-age-note"></span></label>
+          <label>Plan through age<input id="rt-plan-age" type="number" min="1" max="120" step="1" required></label>
+          <label>Annual pre-retirement contributions<input id="rt-contribution" type="text" inputmode="decimal" autocomplete="off" data-money required></label>
+          <label>Expected nominal growth (%)<input id="rt-return" type="number" min="-97.99" step="0.1" required></label>
+          <label>Annual volatility (%)<input id="rt-volatility" type="number" min="0" step="0.1" required></label>
+          <label>Inflation (%)<input id="rt-inflation" type="number" min="0" step="0.1" required></label>
+          <label>Effective withdrawal tax (%)<input id="rt-tax" type="number" min="0" max="99.99" step="0.1" required></label>
+        </form>
+        <div class="assumption-help" id="rt-contribution-source"></div>
+        <div class="assumption-help" id="rt-growth-source"></div>
+        <div class="assumption-help" id="rt-volatility-source"></div>
+        <div class="assumption-help">Base spending applies from retirement when no dated spending rows are entered. Additional base income applies from retirement alongside dated income rows. Once benefit timing is calculated, CPP/OAS is included separately from its selected start dates in the income calculations and wealth forecast; a zero base income does not exclude those benefits. See the combined annual CPP/OAS estimate below. Income is treated as after-tax and inflation-indexed. Withdrawal tax grosses up only the spending gap funded by the portfolio.</div>
+      </section>
+
+      <section class="retirement-panel">
+        <div class="panel-title">Starting withdrawal</div>
+        <div class="panel-note" id="rt-withdrawal-basis">Calculated at the retirement start date, including income streams active on that date.</div>
+        <div class="metric-grid">
+          <div class="metric"><div class="label">After-tax spending gap</div><div class="metric-value" id="rt-net-gap">—</div></div>
+          <div class="metric"><div class="label">Gross portfolio draw</div><div class="metric-value" id="rt-gross-draw">—</div></div>
+          <div class="metric"><div class="label">Base initial withdrawal rate</div><div class="metric-value" id="rt-withdrawal-rate">—</div></div>
+        </div>
+        <div class="benefit-calculator" aria-labelledby="rt-benefit-title">
+          <div class="benefit-heading">
+            <div class="panel-title" id="rt-benefit-title">CPP + OAS estimate</div>
+            <div class="panel-note" id="rt-income-source">Add a date of birth to calculate the estimate.</div>
+          </div>
+          <div class="benefit-section">
+            <div class="benefit-name">CPP</div>
+            <label class="benefit-row"><span>Age-65 monthly basis</span><input id="rt-cpp-basis" type="text" inputmode="decimal" autocomplete="off" data-benefit-field="cppBasis"></label>
+            <div class="benefit-row"><span>Timing adjustment</span><strong id="rt-cpp-adjustment">—</strong></div>
+            <label class="benefit-row"><span>Benefit starts</span><span class="benefit-control"><input id="rt-cpp-start" type="date" data-benefit-field="cppStart"><small id="rt-cpp-start-age"></small></span></label>
+            <div class="benefit-row benefit-result"><span>Estimated monthly CPP</span><strong id="rt-cpp-monthly">—</strong></div>
+          </div>
+          <div class="benefit-section">
+            <div class="benefit-name">OAS</div>
+            <label class="benefit-row"><span>Age-65 monthly basis</span><input id="rt-oas-basis" type="text" inputmode="decimal" autocomplete="off" data-benefit-field="oasBasis"></label>
+            <div class="benefit-row"><span>Timing adjustment</span><strong id="rt-oas-adjustment">—</strong></div>
+            <label class="benefit-row"><span>Benefit starts</span><span class="benefit-control"><input id="rt-oas-start" type="date" data-benefit-field="oasStart"><small id="rt-oas-start-age"></small></span></label>
+            <div class="benefit-row benefit-result"><span>Estimated monthly OAS</span><strong id="rt-oas-monthly">—</strong></div>
+          </div>
+          <div class="benefit-total"><span>Combined annual estimate</span><strong id="rt-benefit-annual">—</strong></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="retirement-panel schedules-panel">
+      <div class="title-row">
+        <div><div class="panel-title">Scheduled cash flows</div><div class="panel-note">Dated income and spending replace the matching base amount. Event amounts are positive for inflows and negative for outflows.</div></div>
+      </div>
+      <div class="cash-flow-grid">
+        <div class="schedule-card">
+          <div class="schedule-head"><div><div class="schedule-title">Income streams</div><div class="schedule-note">Annual, after-tax amounts</div></div><button type="button" class="schedule-add" data-add-schedule="income">Add</button></div>
+          <div id="rt-income-streams" class="schedule-rows"></div>
+          <div id="rt-income-empty" class="schedule-empty">Using base retirement income.</div>
+        </div>
+        <div class="schedule-card">
+          <div class="schedule-head"><div><div class="schedule-title">Spending phases</div><div class="schedule-note">Annual amounts; phases cannot overlap</div></div><button type="button" class="schedule-add" data-add-schedule="spending">Add</button></div>
+          <div id="rt-spending-phases" class="schedule-rows"></div>
+          <div id="rt-spending-empty" class="schedule-empty">Using base annual spending.</div>
+        </div>
+        <div class="schedule-card">
+          <div class="schedule-head"><div><div class="schedule-title">One-time events</div><div class="schedule-note">Signed amount in the scheduled month</div></div><button type="button" class="schedule-add" data-add-schedule="event">Add</button></div>
+          <div id="rt-one-time-events" class="schedule-rows"></div>
+          <div id="rt-event-empty" class="schedule-empty">No one-time events.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="probability-cards" aria-label="Monte Carlo results">
+      <div class="probability-card success"><div class="scenario-label">Plan success</div><div class="probability-value" id="rt-success-probability">—</div><div class="scenario-note" id="rt-success-note">Positive through the plan horizon</div></div>
+      <div class="probability-card"><div class="scenario-label">Ending balance</div><div class="percentile-list"><span>P10 <strong id="rt-ending-p10">—</strong></span><span>P50 <strong id="rt-ending-p50">—</strong></span><span>P90 <strong id="rt-ending-p90">—</strong></span></div><div class="scenario-note" id="rt-ending-note"></div></div>
+      <div class="probability-card"><div class="scenario-label">Depletion age among failures</div><div class="percentile-list"><span>P10 <strong id="rt-depletion-p10">—</strong></span><span>P50 <strong id="rt-depletion-p50">—</strong></span><span>P90 <strong id="rt-depletion-p90">—</strong></span></div><div class="scenario-note" id="rt-depletion-note"></div></div>
+    </section>
+
+    <section class="retirement-panel chart-panel">
+      <div class="title-row"><div><div class="panel-title">Monte Carlo portfolio range</div><div class="panel-note">P10, median, and P90 paths across 10,000 reproducible simulations.</div></div><div class="chart-controls"><label class="zoom-control">Zoom <span id="rt-chart-zoom-label">Full</span><input type="range" id="rt-chart-zoom" min="2" max="60" step="1" value="60"></label><div class="panel-note" id="rt-chart-note">Real balance in today's CAD</div></div></div>
+      <div class="retirement-chart"><canvas id="rt-chart"></canvas></div>
+    </section>
+
+    <div class="section-heading"><div class="panel-title">Fixed-return stress cases</div><div class="panel-note">Deterministic cases use the expected return plus or minus two percentage points.</div></div>
+    <section class="scenario-cards" aria-label="Fixed-return forecast scenarios">
+      <div class="scenario-card conservative"><div class="scenario-label">Conservative</div><div class="runway" id="rt-conservative-runway">—</div><div class="scenario-return" id="rt-conservative-return"></div><div class="scenario-note" id="rt-conservative-note"></div></div>
+      <div class="scenario-card base"><div class="scenario-label">Base</div><div class="runway" id="rt-base-runway">—</div><div class="scenario-return" id="rt-base-return"></div><div class="scenario-note" id="rt-base-note"></div></div>
+      <div class="scenario-card optimistic"><div class="scenario-label">Optimistic</div><div class="runway" id="rt-optimistic-runway">—</div><div class="scenario-return" id="rt-optimistic-return"></div><div class="scenario-note" id="rt-optimistic-note"></div></div>
+    </section>
+
+    <div class="retirement-disclaimer">Illustrative planning output, not a guarantee. CPP/OAS uses published average/maximum benefit amounts rather than an individual entitlement; account-specific taxation and withdrawal ordering are not modeled. Income amounts are assumed after tax and all scheduled amounts are expressed in today's dollars.</div>
+  </div>
+</section>
+
+<section id="view-journal" class="hub-view view-journal">
+  <div class="shell">
+    <div class="top">
+      <div class="sub" id="workbook-status">Loading…</div>
+      <nav class="tabs" id="tabs">
+        <button data-tab="import" class="active">Import</button>
+        <button data-tab="transfers">Transfers</button>
+        <button data-tab="review">Review</button>
+        <button data-tab="close">Close</button>
+        <button data-tab="post">Post</button>
+        <button data-tab="rules">Rules</button>
+      </nav>
+    </div>
+    <div id="view"></div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script src="/assets/budget.js"></script>
+<script src="/assets/budget-plan.js"></script>
+<script src="/assets/portfolio.js"></script>
+<script src="/assets/retirement.js"></script>
+<script src="/assets/journal.js"></script>
+<script src="/assets/hub.js"></script>
+</body>
+</html>

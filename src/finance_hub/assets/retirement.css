@@ -1,0 +1,116 @@
+/* Retirement runway view. Every selector is scoped to avoid collisions with
+   the Budget, Portfolio, and Journal views in the shared document. */
+.view-retirement.hub-view { padding: 28px; }
+.view-retirement .retirement-shell { max-width: 1480px; margin: auto; }
+.view-retirement .retirement-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 22px; }
+.view-retirement .eyebrow, .view-retirement .label, .view-retirement .assumption-grid label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.view-retirement h2 { font-size: 32px; letter-spacing: -.8px; margin: 3px 0; }
+.view-retirement .retirement-sub, .view-retirement .panel-note, .view-retirement .source-note, .view-retirement .scenario-note, .view-retirement .assumption-help { color: var(--muted); font-size: 12px; }
+.view-retirement .secondary-button { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); cursor: pointer; font: inherit; }
+.view-retirement .secondary-button:hover { border-color: var(--blue); }
+.view-retirement .source-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 12px; }
+.view-retirement .source-card, .view-retirement .retirement-panel, .view-retirement .scenario-card, .view-retirement .probability-card { background: linear-gradient(145deg, rgba(28,36,51,.96), rgba(19,25,37,.96)); border: 1px solid var(--line); border-radius: 14px; }
+.view-retirement .source-card { padding: 17px 18px; }
+.view-retirement .source-value { font-size: 24px; font-weight: 720; letter-spacing: -.5px; margin: 6px 0 2px; }
+.view-retirement .source-status { color: var(--gold); font-size: 12px; min-height: 18px; display: inline; }
+.view-retirement .text-button { border: 0; background: none; color: var(--blue); font: inherit; font-size: 12px; cursor: pointer; padding: 0 0 0 7px; display: none; }
+.view-retirement .forecast-error { color: var(--red); min-height: 20px; margin: 5px 0 9px; font-size: 12px; }
+.view-retirement .retirement-grid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 18px; margin-bottom: 18px; }
+.view-retirement .retirement-panel { padding: 20px; min-width: 0; }
+.view-retirement .panel-title { font-weight: 650; font-size: 15px; }
+.view-retirement .panel-note { margin-top: 3px; }
+.view-retirement .assumption-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 17px; }
+.view-retirement .assumption-grid label { display: block; }
+.view-retirement .assumption-grid input { width: 100%; margin-top: 6px; background: var(--panel); color: var(--text); color-scheme: dark; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font: inherit; }
+.view-retirement .assumption-grid input:focus { outline: 1px solid var(--blue); border-color: var(--blue); }
+.view-retirement .assumption-input-note { display: block; min-height: 13px; margin-top: 5px; color: var(--blue); font-size: 10px; letter-spacing: 0; text-transform: none; }
+.view-retirement .assumption-help { margin-top: 14px; line-height: 1.5; }
+.view-retirement .metric-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 17px; }
+.view-retirement .metric { background: var(--panel); border-radius: 9px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.view-retirement .metric-value { font-size: 20px; font-weight: 700; white-space: nowrap; }
+.view-retirement .benefit-calculator { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 18px; }
+.view-retirement .benefit-heading { margin-bottom: 12px; }
+.view-retirement .benefit-section { background: var(--panel); border-radius: 9px; padding: 12px 14px; margin-top: 10px; }
+.view-retirement .benefit-name { color: var(--blue); font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; margin-bottom: 7px; }
+.view-retirement .benefit-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: baseline; color: var(--muted); font-size: 11px; padding: 4px 0; }
+.view-retirement .benefit-row strong { color: var(--text); font-size: 12px; font-weight: 650; text-align: right; }
+.view-retirement .benefit-row input { width: 150px; background: var(--panel2); color: var(--text); color-scheme: dark; border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; font: inherit; font-size: 12px; text-align: right; }
+.view-retirement .benefit-row input:focus { outline: 1px solid var(--blue); border-color: var(--blue); }
+.view-retirement .benefit-control { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.view-retirement .benefit-control small { min-height: 12px; color: var(--blue); font-size: 10px; }
+.view-retirement .benefit-row.benefit-result { border-top: 1px solid var(--line); margin-top: 5px; padding-top: 9px; }
+.view-retirement .benefit-row.benefit-result strong { color: var(--mint); font-size: 14px; }
+.view-retirement .benefit-total { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; padding: 13px 14px 5px; color: var(--muted); font-size: 11px; }
+.view-retirement .benefit-total strong { color: var(--text); font-size: 18px; white-space: nowrap; }
+.view-retirement .schedules-panel { margin-bottom: 18px; }
+.view-retirement .cash-flow-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.view-retirement .schedule-card { background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 14px; min-width: 0; }
+.view-retirement .schedule-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.view-retirement .schedule-title { font-size: 13px; font-weight: 650; }
+.view-retirement .schedule-note, .view-retirement .schedule-empty { color: var(--muted); font-size: 11px; }
+.view-retirement .schedule-empty { padding: 8px 0 2px; }
+.view-retirement .schedule-add, .view-retirement .schedule-remove { border: 1px solid var(--line); border-radius: 7px; background: var(--panel2); color: var(--text); font: inherit; cursor: pointer; }
+.view-retirement .schedule-add { padding: 5px 9px; font-size: 11px; }
+.view-retirement .schedule-add:hover { border-color: var(--blue); }
+.view-retirement .schedule-row { display: grid; grid-template-columns: minmax(0, 1fr) 34px; gap: 7px; border-top: 1px solid var(--line); padding: 10px 0; }
+.view-retirement .schedule-row:first-child { border-top: 0; padding-top: 0; }
+.view-retirement .schedule-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; min-width: 0; }
+.view-retirement .schedule-fields .wide { grid-column: 1 / -1; }
+.view-retirement .schedule-fields label { min-width: 0; color: var(--muted); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+.view-retirement .schedule-field-label { display: block; margin: 0 0 3px 2px; }
+.view-retirement .schedule-fields input { min-width: 0; width: 100%; background: var(--panel2); color: var(--text); color-scheme: dark; border: 1px solid var(--line); border-radius: 7px; padding: 7px 8px; font: inherit; font-size: 11px; }
+.view-retirement .schedule-fields input:focus { outline: 1px solid var(--blue); border-color: var(--blue); }
+.view-retirement .schedule-remove { align-self: start; height: 31px; color: var(--muted); font-size: 17px; }
+.view-retirement .schedule-remove:hover { color: var(--red); border-color: var(--red); }
+.view-retirement .probability-cards { display: grid; grid-template-columns: .8fr 1.1fr 1.1fr; gap: 18px; margin-bottom: 18px; }
+.view-retirement .probability-card { padding: 20px; min-width: 0; }
+.view-retirement .probability-card.success { border-top: 3px solid var(--mint); }
+.view-retirement .probability-value { font-size: 36px; font-weight: 760; letter-spacing: -.8px; margin: 6px 0 2px; }
+.view-retirement .percentile-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.view-retirement .percentile-list span { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.view-retirement .percentile-list strong { color: var(--text); font-size: 16px; letter-spacing: 0; text-transform: none; white-space: nowrap; }
+.view-retirement .scenario-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 18px; }
+.view-retirement .scenario-card { padding: 20px; border-top-width: 3px; }
+.view-retirement .scenario-card.conservative { border-top-color: var(--gold); }
+.view-retirement .scenario-card.base { border-top-color: var(--blue); }
+.view-retirement .scenario-card.optimistic { border-top-color: var(--mint); }
+.view-retirement .scenario-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .09em; }
+.view-retirement .runway { font-size: 28px; font-weight: 730; margin: 6px 0 2px; }
+.view-retirement .scenario-return { font-size: 12px; margin-bottom: 5px; }
+.view-retirement .chart-panel { margin-bottom: 16px; }
+.view-retirement .title-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+.view-retirement .chart-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.view-retirement .zoom-control { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.view-retirement .zoom-control span { min-width: 46px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+.view-retirement .zoom-control input[type="range"] { width: 120px; accent-color: var(--blue); cursor: pointer; }
+.view-retirement .section-heading { margin: 22px 2px 12px; }
+.view-retirement .retirement-chart { height: 330px; position: relative; }
+.view-retirement .retirement-disclaimer { color: var(--muted); font-size: 11px; line-height: 1.55; text-align: center; max-width: 900px; margin: 0 auto; }
+
+@media (max-width: 1050px) {
+  .view-retirement .source-cards { grid-template-columns: repeat(2, 1fr); }
+  .view-retirement .retirement-grid { grid-template-columns: 1fr; }
+  .view-retirement .cash-flow-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .view-retirement.hub-view { padding: 14px; }
+  .view-retirement .retirement-top { align-items: stretch; flex-direction: column; }
+  .view-retirement .retirement-top > div { width: 100%; min-width: 0; }
+  .view-retirement .retirement-top .secondary-button { align-self: flex-start; }
+  .view-retirement h2 { max-width: 100%; overflow-wrap: anywhere; }
+  .view-retirement .assumption-grid { grid-template-columns: 1fr; }
+  .view-retirement .probability-cards { grid-template-columns: 1fr; }
+  .view-retirement .scenario-cards { grid-template-columns: 1fr; }
+  .view-retirement h2 { font-size: 27px; }
+  .view-retirement .title-row { align-items: flex-start; flex-direction: column; }
+}
+@media (max-width: 520px) {
+  .view-retirement .source-cards { grid-template-columns: 1fr; }
+  .view-retirement .metric { align-items: flex-start; flex-direction: column; }
+  .view-retirement .benefit-row { grid-template-columns: 1fr; gap: 2px; }
+  .view-retirement .benefit-row strong { text-align: left; }
+  .view-retirement .benefit-row input { width: 100%; text-align: left; }
+  .view-retirement .benefit-control { align-items: flex-start; width: 100%; }
+  .view-retirement .benefit-total { align-items: flex-start; flex-direction: column; }
+  .view-retirement .retirement-chart { height: 270px; }
+}

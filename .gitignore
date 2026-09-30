@@ -1,0 +1,80 @@
+# Personal financial data — never commit
+Personal Budget.xlsx
+/portfolio.xlsx
+/budget_dashboard.json
+/data/**
+!/data/.gitkeep
+/backups/
+*.xlsx
+!/examples/Personal Budget Template.xlsx
+*.xlsm
+*.csv
+*.sqlite*
+*.db
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Publication planning contains private audit findings
+/docs/private/
+/public-preview/
+
+# Archived superseded implementation material
+\!superceded/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.pytest_tmp/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual envs
+.venv/
+.uv-cache/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code per-project state
+.claude/
+
+# superpowers subagent-driven-development scratch workspace
+.superpowers/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+dist/
+*.whl
+
+# Workspace-local test scratch directories
+/.test-tmp/
+/.pytest*_tmp/
+
+# Graphify generated outputs and caches
+/graphify-out/
+
+# Stray Dropbox client crash logs written into this folder
+debug.log
+
+# finance-hub runtime log written by run.bat's hidden launch
+logs/

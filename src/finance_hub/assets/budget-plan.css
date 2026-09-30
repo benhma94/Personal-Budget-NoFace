@@ -1,0 +1,59 @@
+/* Budget-plan view -- category x month grid for editing the Budget sheet
+   in-app. Scoped under .view-budget-plan per the hub's shared-selector
+   convention (see theme.css's header comment). */
+.view-budget-plan.hub-view { padding: 28px; }
+.view-budget-plan .shell { max-width: 1480px; margin: auto; }
+.view-budget-plan .eyebrow { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.view-budget-plan h1 { font-size: 28px; letter-spacing: -.6px; margin: 2px 0 3px; }
+.view-budget-plan .sub { color: var(--muted); font-size: 12px; }
+
+.view-budget-plan .top { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 20px; flex-wrap: wrap; }
+.view-budget-plan .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+.view-budget-plan .year-switch { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 4px 6px; }
+.view-budget-plan .year-switch button { border: 0; background: none; color: var(--text); font-size: 16px; line-height: 1; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+.view-budget-plan .year-switch button:hover { background: var(--panel2); }
+.view-budget-plan .year-label { min-width: 44px; text-align: center; font-weight: 650; }
+
+.view-budget-plan .bp-button { font: inherit; padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); cursor: pointer; }
+.view-budget-plan .bp-button:hover { border-color: var(--blue); }
+.view-budget-plan .bp-button.primary { background: var(--blue); border-color: var(--blue); color: #0c1018; font-weight: 650; }
+.view-budget-plan .bp-button.primary:hover { opacity: .92; }
+.view-budget-plan .bp-button:disabled { cursor: wait; opacity: .6; }
+
+.view-budget-plan .unsaved-indicator { font-size: 12px; color: var(--gold); }
+
+.view-budget-plan .bp-summary { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.view-budget-plan .bp-stat { flex: 1; min-width: 140px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; }
+.view-budget-plan .bp-stat-label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.view-budget-plan .bp-stat-value { font-size: 19px; font-weight: 650; }
+.view-budget-plan .good { color: var(--mint); }
+.view-budget-plan .bad { color: var(--red); }
+
+.view-budget-plan .table-wrap { overflow: auto; max-height: 72vh; border: 1px solid var(--line); border-radius: 12px; }
+.view-budget-plan .bp-grid { width: 100%; border-collapse: collapse; font-size: 12px; }
+.view-budget-plan .bp-grid th { position: sticky; top: 0; background: var(--panel); text-align: right; padding: 9px 8px; border-bottom: 1px solid var(--line); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); z-index: 1; }
+.view-budget-plan .bp-grid th:first-child { text-align: left; position: sticky; left: 0; z-index: 2; }
+.view-budget-plan .bp-section-row td { padding: 10px 8px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+.view-budget-plan .bp-category { padding: 6px 8px; white-space: nowrap; position: sticky; left: 0; background: var(--bg); border-bottom: 1px solid rgba(41,51,72,.5); }
+.view-budget-plan .bp-cell { padding: 3px; border-bottom: 1px solid rgba(41,51,72,.5); }
+.view-budget-plan .bp-total { padding: 6px 10px; text-align: right; font-weight: 650; white-space: nowrap; border-left: 1px solid var(--line); border-bottom: 1px solid rgba(41,51,72,.5); }
+
+.view-budget-plan .bp-totals-row { background: var(--panel); }
+.view-budget-plan .bp-totals-row .bp-category { background: var(--panel); font-weight: 650; }
+.view-budget-plan .bp-totals-row td { border-top: 1px solid var(--line); border-bottom: 1px solid rgba(41,51,72,.5); }
+.view-budget-plan .bp-month-total { padding: 6px 8px; text-align: right; font-weight: 600; white-space: nowrap; }
+.view-budget-plan .bp-net-row { font-weight: 700; }
+.view-budget-plan .bp-net-row td, .view-budget-plan .bp-net-row .bp-category { border-top: 1px solid var(--line); }
+.view-budget-plan .bp-input { width: 92px; text-align: right; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 7px; font: inherit; }
+.view-budget-plan .bp-input:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+.view-budget-plan .bp-input.suggestion { color: var(--muted); font-style: italic; border-style: dashed; }
+.view-budget-plan .bp-input.invalid { border-color: var(--red, #f07178); color: var(--red, #f07178); outline-color: var(--red, #f07178); }
+
+@media (max-width: 620px) {
+  .view-budget-plan.hub-view { padding: 14px; }
+  .view-budget-plan .top { flex-direction: column; align-items: stretch; }
+  .view-budget-plan .controls { width: 100%; }
+  .view-budget-plan .bp-input { width: 76px; }
+  .view-budget-plan .bp-stat { min-width: 100%; }
+}

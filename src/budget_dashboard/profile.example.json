@@ -1,0 +1,29 @@
+{
+  "income_categories": ["Salary", "Other Income"],
+  "expense_categories": [
+    "Rent", "Utilities", "Food", "Transit", "Entertainment",
+    "Interest Expense", "Recurring Fees", "Shopping", "Other"
+  ],
+  "category_aliases": {"Groceries": "Food", "Electricity": "Utilities"},
+  "asset_accounts": [
+    "Cash", "Primary Checking", "Secondary Checking", "Savings Account",
+    "Investment Account", "Brokerage Cash", "Employer ESPP", "Transit Card"
+  ],
+  "liability_accounts": ["Credit Card", "Rewards Card", "Loan", "Other Payable"],
+  "month_close": {
+    "investment": {
+      "label": "Investment",
+      "account": "Investment Account",
+      "category": "Investment Income",
+      "description": "Month close - Investment Income",
+      "note": "Investment Returns"
+    },
+    "transit": {
+      "label": "Transit",
+      "account": "Transit Card",
+      "category": "Transit",
+      "description": "Month close - Transit",
+      "note": "Transit for the month"
+    }
+  }
+}

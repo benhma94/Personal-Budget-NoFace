@@ -1,0 +1,8 @@
+{
+  "us_listed": ["AAPL", "MSFT"],
+  "ticker_overrides": {
+    "EXAMPLE.UN": "EXAMPLE-UN.TO",
+    "LEGACYFUND": "CURRENTFUND"
+  },
+  "internal_tickers": ["CURRENTFUND"]
+}
