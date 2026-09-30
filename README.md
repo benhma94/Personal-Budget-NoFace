@@ -42,7 +42,7 @@ For Portfolio, copy the synthetic template to the project root:
 Copy-Item 'examples/Portfolio Template.xlsx' 'portfolio.xlsx'
 ```
 
-Edit its **Config** sheet to choose your start date, risk-free rate, and benchmark fallback weights. Add a Wealthsimple activities export to `data/`. To fetch prices, run `setup_lseg_app_key.bat` once and keep LSEG Workspace open when you press **Refresh**. The Portfolio tab can still display its last cached run while Workspace is closed. Your `portfolio.xlsx` is ignored by Git.
+Edit its **Config** sheet to choose your start date, risk-free rate, and benchmark fallback weights. Portfolio refresh currently accepts Wealthsimple activities exports only; put one in `data/` if you use this feature. To fetch prices, run `setup_lseg_app_key.bat` once and keep LSEG Workspace open when you press **Refresh**. The Portfolio tab can still display its last cached run while Workspace is closed. Your `portfolio.xlsx` is ignored by Git.
 
 See the [user guide](docs/guide.md) for workbook setup, tab workflows, and portfolio configuration.
 

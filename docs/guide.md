@@ -20,9 +20,9 @@ Close the workbook in Excel before saving a budget or posting Journal entries in
 - **Retirement:** Explore projections using budget spending and the latest cached portfolio value. You can change the assumptions; the projections are illustrative.
 - **Portfolio:** Review holdings, performance, and exposure from the last refresh. Follow the setup below to refresh its data.
 
-## Set up Portfolio
+## Portfolio setup (optional)
 
-Portfolio uses a separate workbook and a Wealthsimple activities export:
+The other tabs do not need a brokerage export. Portfolio can display cached results, but its current refresh importer accepts Wealthsimple activities exports only. Skip this setup if you do not use Portfolio.
 
 1. Copy `examples/Portfolio Template.xlsx` to `portfolio.xlsx` in the project folder.
 2. In its **Config** sheet, review the inception date, risk-free rate, and benchmark weights. Use **InstrumentMap** for ticker mappings and **PriceOverrides** for prices you maintain yourself, if needed.
