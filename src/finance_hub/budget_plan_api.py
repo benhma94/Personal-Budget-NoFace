@@ -467,13 +467,13 @@ def _update_dimension(sheet_xml: str, new_last_col_letter: str) -> str:
     if not match:
         raise ValueError("worksheet is missing a <dimension> element")
     current_ref = match.group(2)
-    end_match = re.search(r":([A-Z]+)\d+$", current_ref)
+    end_match = re.search(r":([A-Z]+)(\d+)$", current_ref)
     if not end_match:
         raise ValueError("worksheet dimension has no ending cell")
     if column_index_from_string(new_last_col_letter) <= column_index_from_string(end_match.group(1)):
         return sheet_xml
     start = current_ref.split(":", 1)[0]
-    new_ref = f"{start}:{new_last_col_letter}{re.search(r'\d+$', current_ref).group(0)}"
+    new_ref = f"{start}:{new_last_col_letter}{end_match.group(2)}"
     return sheet_xml[: match.start(2)] + new_ref + sheet_xml[match.end(2) :]
 
 
