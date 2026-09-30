@@ -1,14 +1,20 @@
 # Personal Finance Hub
 
-I used to track all my personal finances in an Excel sheet, but picked up some skills during my PhD (plus AI help) to build a more friendly looking app (It's still Excel Journal in the backend, dont' worry).
+I used to track all my personal finances in an Excel sheet, but picked up some skills during my PhD (plus AI help) to build a more friendly looking app (It's still Excel in the backend, dont' worry).
 
-It includes classic accounting General Journals, Budgets, Reports, and also includes other finance tools, like portfolio andalysis/tracking and retirement projections. The backend excelbook is used for storing data (still an accountant at heart).
+It includes classic accounting General Journals, Budgets, Reports, and also includes other finance tools, like portfolio andalysis/tracking and retirement projections. The backend excel book is used for storing data (I'm still an accountant at heart).
 
-The app uses CAD as its base currency. Budget, Report, and Journal do not need LSEG Workspace. Portfolio refresh uses LSEG Workspace for market data, with Yahoo Finance as a fallback for individual instruments.
+The app uses CAD as its base currency. Budget, Report, and Journal do not need LSEG Workspace. If you wish to use the portfolio tracking function, you will need access to LSEG Workspace - Yahoo Finance is used as a fallback for some instruments, but I find coverage can be lacking.
 
-## Quick start (Windows)
+## Quick start
 
-Install `uv`, then run these commands in PowerShell from this folder:
+Clone the repo to your local folder.
+
+Copy in a file into `data/` named `Personal Budget Template.xlsx`. There's a template available for you to get started in `examples/`
+
+Double click `run.bat`. That will open a local webpage which will let you use the tool. It is not hosted online, just a local html page.
+
+The `run.bat` file just runs the following:
 
 ```powershell
 uv python install
@@ -16,33 +22,25 @@ Copy-Item 'examples/Personal Budget Template.xlsx' 'data/Personal Budget.xlsx'
 .\run.bat
 ```
 
-`run.bat` opens the hub at `http://127.0.0.1:8765`.
-
-Or you could just double click the run.bat file, which does the exact same thing. Remember to copy in the workbook into the data/ folder.
-
-There's a template available for you to get started.
-
-The app keeps its Python environment in local AppData, outside this folder.
-
 | Tab | What it does |
 | --- | --- |
-| **Budget** | Edit monthly targets in the workbook. |
 | **Report** | Compare spending with the budget and see cash flow and balances. |
+| **Budget** | Edit monthly targets in the workbook. |
 | **Journal** | Import bank CSVs, review transactions, and post entries to the workbook. |
 | **Retirement** | Explore projections using spending and any cached portfolio value. |
 | **Portfolio** | View cached holdings and returns; refresh with LSEG Workspace running. |
 
 ## Use your own data
 
-Keep your workbook, exports, caches, and journal database under `data/`; they are ignored by Git. Before committing, review what is staged. The example workbook works with the included synthetic profile. For your own account and category names, copy `src/budget_dashboard/profile.example.json` to `data/profile.json` and update it to match your workbook.
+Keep your workbook, exports, caches, and journal database under `data/` everything is kept locally and nothing is shared (unless you upload to Github for some reason).
 
-For Portfolio, copy the synthetic template to the project root:
+The example workbook works with the included synthetic profile. For your own account and category names, copy `src/budget_dashboard/profile.example.json` to `data/profile.json` and update it to match your workbook.
 
-```powershell
-Copy-Item 'examples/Portfolio Template.xlsx' 'portfolio.xlsx'
-```
+For Portfolio, copy the synthetic template from 'examples/' to `data/`:
 
-Edit its **Config** sheet to choose your start date, risk-free rate, and benchmark fallback weights. Portfolio refresh currently accepts Wealthsimple activities exports only; put one in `data/` if you use this feature. To fetch prices, run `setup_lseg_app_key.bat` once and keep LSEG Workspace open when you press **Refresh**. The Portfolio tab can still display its last cached run while Workspace is closed. Your `portfolio.xlsx` is ignored by Git.
+Edit its **Config** sheet to choose your start date, risk-free rate, and benchmark fallback weights. Portfolio refresh currently accepts Wealthsimple activities exports only; put one in `data/` if you use this feature. 
+
+To fetch prices, run `setup_lseg_app_key.bat` once and keep LSEG Workspace open when you press **Refresh**. The Portfolio tab can still display its last cached run while Workspace is closed. 
 
 See the [user guide](docs/guide.md) for workbook setup, tab workflows, and portfolio configuration.
 

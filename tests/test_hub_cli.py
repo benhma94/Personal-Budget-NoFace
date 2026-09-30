@@ -14,7 +14,7 @@ def test_main_returns_1_when_workbook_missing(tmp_path, capsys):
 def test_defaults_match_the_single_launcher_convention():
     args = _parser().parse_args([])
     assert args.workbook.name == "Personal Budget.xlsx"
-    assert args.portfolio_workbook.name == "portfolio.xlsx"
+    assert args.portfolio_workbook == Path("data/portfolio.xlsx")
     assert args.portfolio_payload.name == "portfolio_payload.json"
     assert args.port == 8765
 
