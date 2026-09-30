@@ -18,8 +18,11 @@ ROOT_FILES = {
     "pyproject.toml", "run.bat", "run_hidden.vbs", "setup_lseg_app_key.bat",
     "setup_lseg_app_key.ps1", "uv.lock",
 }
-PUBLIC_DIRS = {".github", "scripts", "src", "tests"}
-PUBLIC_EXAMPLES = {"examples/Personal Budget Template.xlsx"}
+PUBLIC_DIRS = {".github", "docs", "scripts", "src", "tests"}
+PUBLIC_EXAMPLES = {
+    "examples/Personal Budget Template.xlsx",
+    "examples/Portfolio Template.xlsx",
+}
 
 
 def public_path(path: Path) -> bool:
