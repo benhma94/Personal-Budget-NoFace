@@ -19,7 +19,10 @@ ROOT_FILES = {
     "setup_lseg_app_key.ps1", "uv.lock",
 }
 PUBLIC_DIRS = {".github", "scripts", "src", "tests"}
-PUBLIC_EXAMPLES = {"examples/Personal Budget Template.xlsx"}
+PUBLIC_EXAMPLES = {
+    "examples/Personal Budget Template.xlsx",
+    "examples/Portfolio Template.xlsx",
+}
 # Needs the private repo's PUBLIC_REPO_TOKEN secret, so it would only fail publicly.
 EXCLUDED = {".github/workflows/publish-public.yml"}
 

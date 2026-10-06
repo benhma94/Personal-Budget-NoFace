@@ -7,6 +7,7 @@ Personal Budget.xlsx
 /backups/
 *.xlsx
 !/examples/Personal Budget Template.xlsx
+!/examples/Portfolio Template.xlsx
 *.xlsm
 *.csv
 *.sqlite*
