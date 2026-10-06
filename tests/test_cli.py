@@ -23,8 +23,8 @@ from portfolio_tracker.cli import (
 )
 
 
-def test_default_workbook_is_in_data_folder():
-    assert _parse_args([]).workbook == "data/portfolio.xlsx"
+def test_default_workbook_is_in_project_root():
+    assert _parse_args([]).workbook == "portfolio.xlsx"
 
 
 def test_default_payload_output_path():

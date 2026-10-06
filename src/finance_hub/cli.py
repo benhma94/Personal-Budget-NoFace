@@ -15,7 +15,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--workbook", type=Path, default=Path("data/Personal Budget.xlsx"),
                          help="workbook containing the Journal, Budget, and Ledger sheets")
-    parser.add_argument("--portfolio-workbook", type=Path, default=Path("data/portfolio.xlsx"),
+    parser.add_argument("--portfolio-workbook", type=Path, default=Path("portfolio.xlsx"),
                          help="portfolio workbook used by the Portfolio tab's Refresh action")
     parser.add_argument("--portfolio-payload", type=Path, default=Path("data/portfolio_payload.json"),
                          help="cached portfolio dashboard payload written by portfolio-tracker")

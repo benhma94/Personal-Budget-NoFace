@@ -18,15 +18,16 @@ ROOT_FILES = {
     "pyproject.toml", "run.bat", "run_hidden.vbs", "setup_lseg_app_key.bat",
     "setup_lseg_app_key.ps1", "uv.lock",
 }
-PUBLIC_DIRS = {".github", "docs", "scripts", "src", "tests"}
-PUBLIC_EXAMPLES = {
-    "examples/Personal Budget Template.xlsx",
-    "examples/Portfolio Template.xlsx",
-}
+PUBLIC_DIRS = {".github", "scripts", "src", "tests"}
+PUBLIC_EXAMPLES = {"examples/Personal Budget Template.xlsx"}
+# Needs the private repo's PUBLIC_REPO_TOKEN secret, so it would only fail publicly.
+EXCLUDED = {".github/workflows/publish-public.yml"}
 
 
 def public_path(path: Path) -> bool:
     parts = path.parts
+    if path.as_posix() in EXCLUDED:
+        return False
     return (
         path.as_posix() == "data/.gitkeep"
         or path.as_posix() in PUBLIC_EXAMPLES
