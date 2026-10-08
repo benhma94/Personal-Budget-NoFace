@@ -8,7 +8,8 @@ wscript.exe "%~dp0run_hidden.vbs" "%~f0" %*
 exit /b 0
 
 :run
-cd /d "%~dp0"
+rem pushd (not cd) so launching from a UNC path also works.
+pushd "%~dp0"
 set "UV_PROJECT_ENVIRONMENT=%LOCALAPPDATA%\uv\project-envs\personal-budget"
 
 rem OneDrive's Files On-Demand cloud filter driver attaches to the whole
@@ -50,4 +51,5 @@ if not exist "logs" mkdir "logs"
 if errorlevel 1 (
   wscript.exe "%~dp0msgbox.vbs" "Finance Hub exited with an error. See logs\finance-hub.log for details."
 )
+popd
 endlocal

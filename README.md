@@ -1,22 +1,48 @@
-# Portfolio Tracker
+# Personal Budget — NoFace
 
-Personal portfolio tracker with positions, geographic/sector/asset-class exposure, annualized time-weighted return vs an allocation-matched blended benchmark, and a full risk suite (StDev, VaR 95/99%, Sharpe, Beta, Correlation, Information Ratio, Treynor, Jensen's Alpha).
+**NoFace** = **N**et-worth, **O**utflows, **F**inancial **A**ccounts, **C**ashflow & **E**xpenses.
 
-Base currency: CAD. LSEG Workspace is the primary source for prices, FX, metadata, and Lipper fund data. Yahoo Finance is used only as a per-instrument fallback.
+A local, Windows-based personal finance hub. Double-click `run.bat` and a
+browser tab opens with five tabs: **Portfolio**, **Budget**, **Report**,
+**Retirement**, and **Journal**. It reads your own Excel workbooks, imports
+bank CSVs into a categorized journal, tracks budget vs actual, and reports
+portfolio performance and risk against a blended benchmark. All data stays in
+the project folder on your machine.
+
+## Quick start (5 minutes)
+
+**Requirements:** Windows 10 or later and [uv](https://docs.astral.sh/uv/getting-started/installation/)
+(`powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`).
+LSEG Workspace is optional and only needed for live portfolio prices.
+
+```powershell
+git clone https://github.com/benhma94/Personal-Budget-NoFace.git
+cd Personal-Budget-NoFace
+uv python install
+$env:UV_PROJECT_ENVIRONMENT = "$env:LOCALAPPDATA\uv\project-envs\personal-budget"
+uv sync
+Copy-Item 'examples/Personal Budget Template.xlsx' 'data/Personal Budget.xlsx'
+Copy-Item 'examples/Portfolio Template.xlsx' 'portfolio.xlsx'
+```
+
+Then double-click **`run.bat`**. It opens `http://127.0.0.1:8765`.
+
+The Budget, Report, Journal, and Retirement tabs work right away with the
+synthetic example data. The Portfolio tab shows data only after its first
+**Refresh** (see [Optional: live portfolio data](#optional-live-portfolio-data)).
 
 ## Personal finance hub
 
-Double-click **`run.bat`** for the single entry point. It opens one browser
-tab at `http://127.0.0.1:8765` with five tabs: **Portfolio**, **Budget**, **Report**,
-**Retirement**, and **Journal**. The Budget, Report, and Journal tabs use your
-workbook. The Portfolio tab renders the last cached pipeline run (fast, and
-works even with LSEG Workspace closed) and has its own **Refresh** button
-that reruns the pipeline described below in the background — press it after
-opening LSEG Workspace when you want current prices. There is no more
-`run_budget.bat`, `run_portfolio.bat`, `run_journal.bat`, or generated
-`budget_dashboard.html` / `portfolio_dashboard.html`; the sections below
-describe each tab's underlying workflow and configuration, which are
-unchanged.
+`run.bat` is the single entry point. The Budget, Report, and Journal tabs use
+your workbook. The Portfolio tab renders the last cached pipeline run (fast, and
+works even with LSEG Workspace closed) and has its own **Refresh** button that
+reruns the pipeline described below in the background. Press it after opening
+LSEG Workspace when you want current prices.
+
+The Portfolio tab shows positions, geographic/sector/asset-class exposure,
+annualized time-weighted return vs an allocation-matched blended benchmark, and
+a full risk suite (StDev, VaR 95/99%, Sharpe, Beta, Correlation, Information
+Ratio, Treynor, Jensen's Alpha). Base currency: CAD.
 
 The Retirement tab combines annualized year-to-date spending from the Budget
 workbook with the cached current Portfolio value. It projects conservative,
@@ -35,13 +61,15 @@ projected to grow without withdrawals or additional contributions; the
 The projection is illustrative and does not model market sequence risk or
 account-specific tax and withdrawal rules.
 
+To launch without `run.bat`:
+
 ```powershell
 $env:UV_PROJECT_ENVIRONMENT = "$env:LOCALAPPDATA\uv\project-envs\personal-budget"
 uv run --frozen finance-hub
 uv run --frozen finance-hub --workbook "data/Personal Budget.xlsx" --portfolio-workbook portfolio.xlsx --port 8765
 ```
 
-## Setup
+## Development setup
 
 ```powershell
 uv python install
@@ -49,17 +77,21 @@ $env:UV_PROJECT_ENVIRONMENT = "$env:LOCALAPPDATA\uv\project-envs\personal-budget
 uv sync --extra dev
 ```
 
-Run `setup_lseg_app_key.bat` and enter the key in its masked prompt. The helper
-stores `LSEG_APP_KEY` in the Windows user environment without putting the value
-in this repository, shell history, or console output. `run.bat` loads the
-persisted value directly, so it works immediately without signing out.
+The project pins Python in `.python-version` and requires a uv-managed interpreter. Its virtual environment is kept in local AppData instead of the project folder, so every computer gets its own machine-local environment. The batch launchers set `UV_PROJECT_ENVIRONMENT` automatically. When running `uv` manually in a new PowerShell session, set the variable as shown above first. Run commands through `uv run`; activating the environment is optional.
 
-The project pins Python in `.python-version` and requires a uv-managed interpreter. Its virtual environment is kept in local AppData instead of the Dropbox project folder, so every computer gets its own machine-local environment. The batch launchers set `UV_PROJECT_ENVIRONMENT` automatically. When running `uv` manually in a new PowerShell session, set the variable as shown above first. Run commands through `uv run`; activating the environment is optional.
+### Using from multiple computers
+
+If you keep the project folder on a network share, each computer needs a one-time setup:
+
+1. Install `uv`. On first launch, `run.bat` builds that computer's environment from `uv.lock`.
+2. If you use live portfolio data, run `setup_lseg_app_key.bat`. The key is stored per Windows user.
+3. If git reports "dubious ownership", add the share path to that user's `safe.directory`.
+
+Run Finance Hub on one computer at a time, and close `Personal Budget.xlsx` in Excel on the other computer. The SQLite files in `data/` are not safe for simultaneous writers over SMB.
 
 ## Local account profile
 
-To try the Budget, Report, and Journal tabs, copy the synthetic workbook into
-the ignored data folder:
+The quick start copies the synthetic workbook into the ignored data folder:
 
 ```powershell
 Copy-Item 'examples/Personal Budget Template.xlsx' 'data/Personal Budget.xlsx'
@@ -86,18 +118,36 @@ Set `FINANCE_PROFILE_PATH` to an alternative JSON path if you run the app from
 outside the project folder. If no local profile exists, the synthetic example
 profile is used; customize it before relying on reports from a real workbook.
 
-Copy `src/portfolio_tracker/symbols.example.json` to `data/symbols.json` to
-configure ticker exceptions for your transactions: bare U.S. listings,
-provider-to-price-source aliases, and instruments priced through the workbook's
-PriceOverrides sheet. `PORTFOLIO_SYMBOLS_PATH` selects an alternative JSON file.
-Both local JSON files are ignored by Git.
-
 Keep the workbook, transaction exports, market-data caches, and merchant seed
 rules under `data/`. Those files, root-level workbook exports, and backups are
 ignored by Git. Review `git status` before every commit.
 
+## Optional: live portfolio data
+
+The Portfolio tab needs LSEG Workspace for market data, an LSEG app key, and a
+Wealthsimple activities export for your transactions. LSEG Workspace is the
+primary source for prices, FX, metadata, and Lipper fund data. Yahoo Finance is
+used only as a per-instrument fallback.
+
+Run `setup_lseg_app_key.bat` and enter the key in its masked prompt. The helper
+stores `LSEG_APP_KEY` in the Windows user environment without putting the value
+in this repository, shell history, or console output. `run.bat` loads the
+persisted value directly, so it works immediately without signing out.
+
 Keep LSEG Workspace running while generating reports. The app key is read from
 the environment and is never written to the workbook or cache.
+
+Drop a Wealthsimple activities export into
+`data/activities-export-YYYY-MM-DD.csv`. The tool auto-detects the most recent
+file in `data/`, or accepts an explicit path through `--transactions-csv`.
+
+Copy `src/portfolio_tracker/symbols.example.json` to `data/symbols.json` to
+configure ticker exceptions for your transactions: bare U.S. listings,
+provider-to-price-source aliases, and instruments priced through the workbook's
+PriceOverrides sheet. `PORTFOLIO_SYMBOLS_PATH` selects an alternative JSON file.
+The local JSON file is ignored by Git.
+
+Then press **Refresh** on the Portfolio tab (see [Run](#run)).
 
 ## Configure the workbook
 
@@ -123,10 +173,6 @@ identifiable allocation and are rebalanced daily.
 
 The configured inception date is a lower-bound preference. If it predates the
 first imported transaction, reporting begins on the first transaction date.
-
-Drop a Wealthsimple activities export into
-`data/activities-export-YYYY-MM-DD.csv`. The tool auto-detects the most recent
-file in `data/`, or accepts an explicit path through `--transactions-csv`.
 
 ## Run
 
