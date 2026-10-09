@@ -19,7 +19,7 @@
 .view-portfolio .info-icon:hover .info-tooltip, .view-portfolio .info-icon:focus .info-tooltip { display: block; }
 .view-portfolio .section-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
 .view-portfolio .section-title-row .section-title { margin-bottom: 0; }
-.view-portfolio .cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 16px; margin-bottom: 24px; }
+.view-portfolio .cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 16px; margin-bottom: 24px; }
 .view-portfolio .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
 .view-portfolio .card-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
 .view-portfolio .card-value { font-size: 26px; font-weight: 700; }
@@ -72,6 +72,24 @@
 .view-portfolio .right { text-align: right; }
 .view-portfolio .positive { color: var(--green); }
 .view-portfolio .negative { color: var(--red); }
+
+/* Compact tier for small laptops. */
+@media (max-width: 1440px), (max-height: 820px) {
+  .view-portfolio.hub-view { padding: 18px; }
+  .view-portfolio .cards { gap: 10px; margin-bottom: 16px; }
+  .view-portfolio .card { padding: 12px 14px; }
+  .view-portfolio .card-label { margin-bottom: 5px; }
+  .view-portfolio .card-value { font-size: 20px; }
+  .view-portfolio .window-results { gap: 10px; margin-bottom: 12px; }
+  .view-portfolio .window-result .card-value { font-size: 17px; }
+  .view-portfolio .section { padding: 16px; margin-bottom: 16px; }
+  .view-portfolio .stats-grid { gap: 10px; }
+  .view-portfolio .stat { padding: 10px 12px; min-height: 0; }
+  .view-portfolio .stat-value { font-size: 17px; }
+  .view-portfolio .chart-wrap { height: 190px; }
+  .view-portfolio .chart-wrap-sm { height: 170px; }
+  .view-portfolio .two-col { gap: 12px; margin-bottom: 16px; }
+}
 
 @media (max-width: 800px) {
   .view-portfolio .window-results, .view-portfolio .two-col { grid-template-columns: 1fr 1fr; }

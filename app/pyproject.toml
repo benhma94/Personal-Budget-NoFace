@@ -7,7 +7,6 @@ name = "portfolio-tracker"
 version = "0.1.0"
 description = "Personal portfolio tracker: positions, exposure, MWR vs benchmark, risk suite"
 requires-python = ">=3.11"
-readme = "README.md"
 dependencies = [
     "lseg-data>=2.1,<3",
     "yfinance>=0.2.40",

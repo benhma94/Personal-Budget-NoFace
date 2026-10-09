@@ -12,31 +12,27 @@ from datetime import datetime
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
-ROOT_FILES = {
-    ".gitignore", ".python-version", "LICENSE", "README.md", "msgbox.vbs",
-    "pyproject.toml", "run.bat", "run_hidden.vbs", "setup_lseg_app_key.bat",
-    "setup_lseg_app_key.ps1", "uv.lock",
+# Paths below are relative to the repo root; the project itself lives in app/.
+APP = Path(__file__).resolve().parents[1]
+ROOT = APP.parent
+PUBLIC_FILES = {
+    ".gitignore", "LICENSE", "README.md",
+    "app/.python-version", "app/launch.pyw", "app/pyproject.toml", "app/setup.ps1",
+    "app/setup_lseg_app_key.bat", "app/setup_lseg_app_key.ps1", "app/uv.lock",
+    "app/data/.gitkeep",
+    "app/examples/Personal Budget Template.xlsx",
+    "app/examples/Portfolio Template.xlsx",
 }
-PUBLIC_DIRS = {".github", "scripts", "src", "tests"}
-PUBLIC_EXAMPLES = {
-    "examples/Personal Budget Template.xlsx",
-    "examples/Portfolio Template.xlsx",
-}
+PUBLIC_DIRS = {".github", "app/scripts", "app/src", "app/tests"}
 # Needs the private repo's PUBLIC_REPO_TOKEN secret, so it would only fail publicly.
 EXCLUDED = {".github/workflows/publish-public.yml"}
 
 
 def public_path(path: Path) -> bool:
-    parts = path.parts
-    if path.as_posix() in EXCLUDED:
+    posix = path.as_posix()
+    if posix in EXCLUDED:
         return False
-    return (
-        path.as_posix() == "data/.gitkeep"
-        or path.as_posix() in PUBLIC_EXAMPLES
-        or len(parts) == 1 and parts[0] in ROOT_FILES
-        or len(parts) > 1 and parts[0] in PUBLIC_DIRS
-    )
+    return posix in PUBLIC_FILES or any(posix.startswith(f"{d}/") for d in PUBLIC_DIRS)
 
 
 def build_snapshot(destination: Path) -> int:
@@ -73,7 +69,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output", type=Path,
-        default=ROOT / "public-preview" / datetime.now().strftime("%Y%m%dT%H%M%S"),
+        default=APP / "public-preview" / datetime.now().strftime("%Y%m%dT%H%M%S"),
         help="new directory to create (default: timestamped public-preview folder)",
     )
     args = parser.parse_args()

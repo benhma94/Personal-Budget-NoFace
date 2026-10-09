@@ -21,8 +21,10 @@ body {
 }
 
 .hub-top { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 18px 28px; border-bottom: 1px solid var(--line); }
-.hub-top .eyebrow { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
-.hub-top h1 { font-size: 20px; margin: 2px 0 0; letter-spacing: -.4px; }
+.brand { display: flex; gap: 12px; align-items: center; }
+.brand-mark { flex: none; display: block; }
+.brand-name { font-size: 20px; font-weight: 700; letter-spacing: .14em; margin: 0; line-height: 1.1; }
+.brand-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
 .hub-nav { display: flex; gap: 5px; background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 4px; }
 .hub-nav button { font: inherit; font-size: 13px; border: 0; background: none; color: var(--muted); padding: 9px 16px; border-radius: 8px; cursor: pointer; }
 .hub-nav button.active { background: var(--panel2); color: var(--text); }
@@ -33,6 +35,14 @@ body {
 .toast { position: fixed; right: 22px; bottom: 22px; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; max-width: 360px; font-size: 13px; z-index: 9; display: none; }
 .toast.error { border-color: var(--red); color: var(--red); }
 .toast.ok { border-color: var(--mint); color: var(--mint); }
+
+/* Small laptops (incl. high-DPI scaling that shrinks the CSS viewport):
+   tighten the chrome so content isn't pushed below the fold. */
+@media (max-width: 1440px), (max-height: 820px) {
+  body { font-size: 13px; }
+  .hub-top { padding: 12px 20px; }
+  .hub-nav button { padding: 7px 12px; }
+}
 
 @media (max-width: 620px) {
   .hub-top { padding: 14px; flex-direction: column; align-items: flex-start; gap: 12px; }

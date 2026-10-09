@@ -700,7 +700,7 @@ function batchLinesHtml(){
 
 function lineHtml(l){
   if(State.editingRow!==l.row_number){
-    return `<tr data-row="${l.row_number}">
+    return `<tr data-row="${l.row_number}"${l.amount===0?' class="muted"':''}>
       <td>${esc(l.posting_date)}</td><td>${esc(l.debit)}</td><td>${esc(l.credit)}</td>
       <td class="right">${money(l.amount)}</td>
       <td class="wrap">${esc(l.note)}</td>
@@ -714,7 +714,7 @@ function lineHtml(l){
     <td><select class="ln-credit">${accountOptions(l.credit)}</select></td>
     <td class="right"><input type="number" step="0.01" class="ln-amount" value="${l.amount}" style="width:100px"></td>
     <td><input type="text" class="ln-note" value="${esc(l.note)}"></td>
-    <td class="row"><button class="primary ln-save" data-row="${l.row_number}">Save</button><button class="ghost ln-cancel">Cancel</button></td>
+    <td class="row"><button class="primary ln-save" data-row="${l.row_number}">Save</button><button class="ghost ln-cancel">Cancel</button><button class="danger ln-delete" data-row="${l.row_number}">Delete</button></td>
   </tr>${hint}`;
 }
 
@@ -757,17 +757,13 @@ async function wirePost(){
   $$('.ln-cancel').forEach(btn=>btn.addEventListener('click',()=>{
     State.editingRow=null; render();
   }));
-  $$('.ln-save').forEach(btn=>btn.addEventListener('click',async()=>{
-    const rowNumber=+btn.dataset.row;
-    const tr=btn.closest('tr');
+  // Save and Delete share one write path: a posted row is never removed
+  // (that would shift every later row out of its batch range), so Delete is
+  // just a save of amount 0 with the note tagged.
+  const saveLine=async(rowNumber,fields,okMessage)=>{
     const original=State.batchLines.find(l=>l.row_number===rowNumber);
     const body={
-      row_number:rowNumber,
-      posting_date:$('.ln-date',tr).value,
-      debit:$('.ln-debit',tr).value,
-      credit:$('.ln-credit',tr).value,
-      amount:parseFloat($('.ln-amount',tr).value),
-      note:$('.ln-note',tr).value,
+      row_number:rowNumber, ...fields,
       expected:{
         posting_date:original.posting_date, debit:original.debit, credit:original.credit,
         amount:original.amount, note:original.note,
@@ -775,7 +771,7 @@ async function wirePost(){
     };
     try{
       await api('POST','/api/journal/row',body);
-      toast('Row updated',true);
+      toast(okMessage,true);
       State.editingRow=null;
       State.batchLines=await api('GET',`/api/batches/${encodeURIComponent(State.expandedBatch)}/lines`);
       render();
@@ -785,6 +781,26 @@ async function wirePost(){
       try{State.batchLines=await api('GET',`/api/batches/${encodeURIComponent(State.expandedBatch)}/lines`)}catch(_e){/* keep stale lines */}
       render();
     }
+  };
+  $$('.ln-save').forEach(btn=>btn.addEventListener('click',()=>{
+    const tr=btn.closest('tr');
+    saveLine(+btn.dataset.row,{
+      posting_date:$('.ln-date',tr).value,
+      debit:$('.ln-debit',tr).value,
+      credit:$('.ln-credit',tr).value,
+      amount:parseFloat($('.ln-amount',tr).value),
+      note:$('.ln-note',tr).value,
+    },'Row updated');
+  }));
+  $$('.ln-delete').forEach(btn=>btn.addEventListener('click',()=>{
+    if(!confirm('Delete this row? It stays in the Journal with amount 0 so later rows keep their positions.'))return;
+    const rowNumber=+btn.dataset.row;
+    const original=State.batchLines.find(l=>l.row_number===rowNumber);
+    const note=original.note||'';
+    saveLine(rowNumber,{
+      posting_date:original.posting_date, debit:original.debit, credit:original.credit,
+      amount:0, note:note.startsWith('[deleted]')?note:`[deleted] ${note}`.trim(),
+    },'Row deleted (zeroed)');
   }));
 }
 

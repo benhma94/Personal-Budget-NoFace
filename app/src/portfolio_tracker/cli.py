@@ -197,7 +197,7 @@ def _run_main(argv: list[str]) -> int:
 
 def _parse_args(argv):
     parser = argparse.ArgumentParser(prog="portfolio-tracker")
-    parser.add_argument("--workbook", default="portfolio.xlsx", help="Path to the portfolio workbook")
+    parser.add_argument("--workbook", default="data/portfolio.xlsx", help="Path to the portfolio workbook")
     parser.add_argument("--transactions-csv", help="Wealthsimple activities CSV (overrides auto-detect)")
     parser.add_argument("--cache-path", default="data/cache.sqlite", help="SQLite cache path")
     parser.add_argument("--no-cache", action="store_true", help="Bypass and overwrite the cache")

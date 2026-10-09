@@ -87,6 +87,20 @@
 .view-retirement .retirement-chart { height: 330px; position: relative; }
 .view-retirement .retirement-disclaimer { color: var(--muted); font-size: 11px; line-height: 1.55; text-align: center; max-width: 900px; margin: 0 auto; }
 
+/* Compact tier for small laptops. */
+@media (max-width: 1440px), (max-height: 820px) {
+  .view-retirement.hub-view { padding: 18px; }
+  .view-retirement h2 { font-size: 26px; }
+  .view-retirement .source-cards { gap: 10px; }
+  .view-retirement .source-card { padding: 12px 14px; }
+  .view-retirement .source-value { font-size: 20px; }
+  .view-retirement .retirement-grid, .view-retirement .probability-cards, .view-retirement .scenario-cards { gap: 12px; margin-bottom: 12px; }
+  .view-retirement .retirement-panel, .view-retirement .probability-card, .view-retirement .scenario-card { padding: 14px; }
+  .view-retirement .probability-value { font-size: 28px; }
+  .view-retirement .runway { font-size: 22px; }
+  .view-retirement .retirement-chart { height: 270px; }
+}
+
 @media (max-width: 1050px) {
   .view-retirement .source-cards { grid-template-columns: repeat(2, 1fr); }
   .view-retirement .retirement-grid { grid-template-columns: 1fr; }
