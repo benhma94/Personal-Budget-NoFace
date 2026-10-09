@@ -50,6 +50,13 @@
 .view-budget-plan .bp-input.suggestion { color: var(--muted); font-style: italic; border-style: dashed; }
 .view-budget-plan .bp-input.invalid { border-color: var(--red, #f07178); color: var(--red, #f07178); outline-color: var(--red, #f07178); }
 
+/* Compact tier for small laptops. */
+@media (max-width: 1440px), (max-height: 820px) {
+  .view-budget-plan.hub-view { padding: 18px; }
+  .view-budget-plan h1 { font-size: 24px; }
+  .view-budget-plan .top { margin-bottom: 14px; }
+}
+
 @media (max-width: 620px) {
   .view-budget-plan.hub-view { padding: 14px; }
   .view-budget-plan .top { flex-direction: column; align-items: stretch; }

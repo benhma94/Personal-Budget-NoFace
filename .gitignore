@@ -1,13 +1,12 @@
 # Personal financial data — never commit
 Personal Budget.xlsx
-/portfolio.xlsx
-/budget_dashboard.json
-/data/**
-!/data/.gitkeep
-/backups/
+/app/budget_dashboard.json
+/app/data/**
+!/app/data/.gitkeep
+/app/backups/
 *.xlsx
-!/examples/Personal Budget Template.xlsx
-!/examples/Portfolio Template.xlsx
+!/app/examples/Personal Budget Template.xlsx
+!/app/examples/Portfolio Template.xlsx
 *.xlsm
 *.csv
 *.sqlite*
@@ -20,11 +19,14 @@ Personal Budget.xlsx
 *.pfx
 
 # Publication planning contains private audit findings
-/docs/private/
-/public-preview/
+/app/docs/private/
+/app/public-preview/
 
 # Archived superseded implementation material
 \!superceded/
+
+# Calcifer keeps timestamped backups next to project.yaml
+/.calcifer/*.bak
 
 # Python
 __pycache__/
@@ -68,14 +70,18 @@ dist/
 *.whl
 
 # Workspace-local test scratch directories
-/.test-tmp/
-/.pytest*_tmp/
+/app/.test-tmp/
+/app/.pytest*_tmp/
 
 # Graphify generated outputs and caches
-/graphify-out/
+/app/graphify-out/
 
 # Stray Dropbox client crash logs written into this folder
 debug.log
 
-# finance-hub runtime log written by run.bat's hidden launch
-logs/
+# finance-hub runtime log written by launch.pyw
+/app/logs/
+
+# Machine-built runtime and per-user shortcut from setup.ps1
+/app/.runtime/
+/NoFace.lnk

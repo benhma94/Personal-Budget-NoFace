@@ -1,13 +1,20 @@
-# Personal Budget — NoFace
+# NOFACE — Personal Budget
 
 **NoFace** = **N**et-worth, **O**utflows, **F**inancial **A**ccounts, **C**ashflow & **E**xpenses.
 
-A local, Windows-based personal finance hub. Double-click `run.bat` and a
+A local, Windows-based personal finance hub. Double-click `NoFace.lnk` and a
 browser tab opens with five tabs: **Portfolio**, **Budget**, **Report**,
 **Retirement**, and **Journal**. It reads your own Excel workbooks, imports
 bank CSVs into a categorized journal, tracks budget vs actual, and reports
 portfolio performance and risk against a blended benchmark. All data stays in
 the project folder on your machine.
+
+## Folder layout
+
+The repo root holds only `NoFace.lnk` (plus this README and the license).
+Everything else lives in `app\`: the code (`src\`, `tests\`, `scripts\`),
+setup scripts, the runtime, logs, and your private data in `app\data\`.
+Unless stated otherwise, paths and commands below are relative to `app\`.
 
 ## Quick start (5 minutes)
 
@@ -17,15 +24,15 @@ LSEG Workspace is optional and only needed for live portfolio prices.
 
 ```powershell
 git clone https://github.com/benhma94/Personal-Budget-NoFace.git
-cd Personal-Budget-NoFace
-uv python install
-$env:UV_PROJECT_ENVIRONMENT = "$env:LOCALAPPDATA\uv\project-envs\personal-budget"
-uv sync
+cd Personal-Budget-NoFace\app
 Copy-Item 'examples/Personal Budget Template.xlsx' 'data/Personal Budget.xlsx'
-Copy-Item 'examples/Portfolio Template.xlsx' 'portfolio.xlsx'
+Copy-Item 'examples/Portfolio Template.xlsx' 'data/portfolio.xlsx'
+powershell -ExecutionPolicy Bypass -File setup.ps1
 ```
 
-Then double-click **`run.bat`**. It opens `http://127.0.0.1:8765`.
+`setup.ps1` builds the runtime, then creates `NoFace.lnk` in the repo
+root (add `-Desktop` to also put a copy on the desktop). Double-click
+**`NoFace.lnk`**; it opens `http://127.0.0.1:8765`.
 
 The Budget, Report, Journal, and Retirement tabs work right away with the
 synthetic example data. The Portfolio tab shows data only after its first
@@ -33,7 +40,7 @@ synthetic example data. The Portfolio tab shows data only after its first
 
 ## Personal finance hub
 
-`run.bat` is the single entry point. The Budget, Report, and Journal tabs use
+`NoFace.lnk` (created by `setup.ps1`) is the single entry point. The Budget, Report, and Journal tabs use
 your workbook. The Portfolio tab renders the last cached pipeline run (fast, and
 works even with LSEG Workspace closed) and has its own **Refresh** button that
 reruns the pipeline described below in the background. Press it after opening
@@ -61,12 +68,12 @@ projected to grow without withdrawals or additional contributions; the
 The projection is illustrative and does not model market sequence risk or
 account-specific tax and withdrawal rules.
 
-To launch without `run.bat`:
+For development, or to launch without `NoFace.lnk`, `uv run --frozen finance-hub` still works:
 
 ```powershell
 $env:UV_PROJECT_ENVIRONMENT = "$env:LOCALAPPDATA\uv\project-envs\personal-budget"
 uv run --frozen finance-hub
-uv run --frozen finance-hub --workbook "data/Personal Budget.xlsx" --portfolio-workbook portfolio.xlsx --port 8765
+uv run --frozen finance-hub --workbook "data/Personal Budget.xlsx" --portfolio-workbook data/portfolio.xlsx --port 8765
 ```
 
 ## Development setup
@@ -77,17 +84,37 @@ $env:UV_PROJECT_ENVIRONMENT = "$env:LOCALAPPDATA\uv\project-envs\personal-budget
 uv sync --extra dev
 ```
 
-The project pins Python in `.python-version` and requires a uv-managed interpreter. Its virtual environment is kept in local AppData instead of the project folder, so every computer gets its own machine-local environment. The batch launchers set `UV_PROJECT_ENVIRONMENT` automatically. When running `uv` manually in a new PowerShell session, set the variable as shown above first. Run commands through `uv run`; activating the environment is optional.
+The project pins Python in `.python-version` and requires a uv-managed interpreter. Its virtual environment is kept in local AppData instead of the project folder, so every computer gets its own machine-local environment. `NoFace.lnk` does not use this environment (it runs the runtime built by `setup.ps1`). When running `uv` manually in a new PowerShell session, set the variable as shown above first. Run commands through `uv run`; activating the environment is optional.
 
-### Using from multiple computers
+### Setup and multiple computers
 
-If you keep the project folder on a network share, each computer needs a one-time setup:
+Run `powershell -ExecutionPolicy Bypass -File app\setup.ps1` once on each PC, then
+double-click `NoFace.lnk`. Switches: `-Desktop` (also copy the shortcut to the
+desktop) and `-Force` (rebuild the runtime even if it looks current).
 
-1. Install `uv`. On first launch, `run.bat` builds that computer's environment from `uv.lock`.
-2. If you use live portfolio data, run `setup_lseg_app_key.bat`. The key is stored per Windows user.
-3. If git reports "dubious ownership", add the share path to that user's `safe.directory`.
-
-Run Finance Hub on one computer at a time, and close `Personal Budget.xlsx` in Excel on the other computer. The SQLite files in `data/` are not safe for simultaneous writers over SMB.
+- **Runtime.** The first run builds the runtime once, in `app\.runtime\` inside the
+  project folder (so on the share). Only that build needs `uv`. Each PC then
+  mirrors it to `%LOCALAPPDATA%\NoFace\runtime` so startup is fast and doesn't
+  load packages over the network. `app\.runtime\` and `NoFace.lnk` are machine-built
+  and git-ignored.
+- **Dependency changes.** When `uv.lock` changes, rerun `setup.ps1` on one PC to
+  rebuild the shared runtime, then once on each other PC. The launcher shows a
+  prompt to rerun it when a PC's mirror is out of date.
+- **Security warnings.** Dotted-IP network paths are in the Internet zone, which
+  triggers warnings on launch. `setup.ps1` adds the host to the current user's
+  Local Intranet zone (a registry entry, no admin needed), which removes them.
+  Alternatively, map the drive through a hostname such as a Tailscale MagicDNS
+  short name.
+- **One PC at a time.** A lock file, `app\data\.noface.lock`, stops NOFACE from
+  running on two PCs at once; the second launch shows a message naming the PC
+  that has it open. A lock not refreshed for 2 minutes is treated as stale. Also
+  close `Personal Budget.xlsx` in Excel on the other computer. The SQLite files
+  in `data/` are not safe for simultaneous writers over SMB.
+- **Logs.** Output goes to `app\logs\finance-hub.log`.
+- If you use live portfolio data, run `setup_lseg_app_key.bat`. The key is
+  stored per Windows user.
+- If git reports "dubious ownership", add the share path to that user's
+  `safe.directory`.
 
 ## Local account profile
 
@@ -104,7 +131,7 @@ positive numbers; use the Debit and Credit columns to indicate direction.
 Budget income targets are positive and expense targets are negative. Add
 month-end dates in Budget row 13 and keep category labels in rows 16–47.
 The Report tab needs at least one dated Journal entry. The Portfolio tab uses
-a separate `portfolio.xlsx` workbook.
+a separate `data/portfolio.xlsx` workbook.
 
 Copy `src/budget_dashboard/profile.example.json` to `data/profile.json`, then
 replace the example categories, account names, aliases, and month-close
@@ -119,7 +146,7 @@ outside the project folder. If no local profile exists, the synthetic example
 profile is used; customize it before relying on reports from a real workbook.
 
 Keep the workbook, transaction exports, market-data caches, and merchant seed
-rules under `data/`. Those files, root-level workbook exports, and backups are
+rules under `data/`. Those files, other workbook exports, and backups are
 ignored by Git. Review `git status` before every commit.
 
 ## Optional: live portfolio data
@@ -131,7 +158,7 @@ used only as a per-instrument fallback.
 
 Run `setup_lseg_app_key.bat` and enter the key in its masked prompt. The helper
 stores `LSEG_APP_KEY` in the Windows user environment without putting the value
-in this repository, shell history, or console output. `run.bat` loads the
+in this repository, shell history, or console output. The launcher loads the
 persisted value directly, so it works immediately without signing out.
 
 Keep LSEG Workspace running while generating reports. The app key is read from
@@ -151,7 +178,7 @@ Then press **Refresh** on the Portfolio tab (see [Run](#run)).
 
 ## Configure the workbook
 
-Open `portfolio.xlsx` in the project folder and maintain the **Config**, **PriceOverrides**, and
+Open `data/portfolio.xlsx` and maintain the **Config**, **PriceOverrides**, and
 **InstrumentMap** sheets. Config includes the base currency, risk-free rate,
 inception date, classification cache TTL, and benchmark blend. InstrumentMap
 maps canonical tickers to LSEG RICs and Yahoo fallback symbols.
@@ -197,7 +224,7 @@ The default run uses cached market data where valid. Pass `--refresh-lseg`
 only when you want to force fresh Lipper allocation snapshots.
 
 Each run reads the newest `data/activities-export-*.csv`, updates these five
-`Report_*` sheets in `portfolio.xlsx`, and caches the dashboard payload to
+`Report_*` sheets in `data/portfolio.xlsx`, and caches the dashboard payload to
 `data/portfolio_payload.json` (read by the hub's Portfolio tab):
 
 - `Report_Positions` — current holdings, last price, FX, CAD value, weight
@@ -260,7 +287,7 @@ in Excel before saving. Return to **Report** to see the updated budget totals.
 ## Personal budget dashboard
 
 Place `Personal Budget.xlsx` in `data/`, then open the Report tab of the hub
-(`run.bat`). It reads the workbook live on every visit; it never saves or
+(`NoFace.lnk`). It reads the workbook live on every visit; it never saves or
 changes the Excel file. The dashboard uses the Journal, Budget, and Ledger sheets and
 includes selectable month, YTD, year-over-year, and custom month-range views,
 budget variance, cash-flow and net-worth trends, category detail, and balances.
@@ -279,7 +306,7 @@ uv run --frozen budget-dashboard --workbook "data/Personal Budget.xlsx" --output
 
 ## Journal entry (CSV import)
 
-Open the Journal tab of the hub (`run.bat`) for entering transactions instead
+Open the Journal tab of the hub (`NoFace.lnk`) for entering transactions instead
 of typing them into Excel by hand. It never requires opening the workbook in
 Excel; close it there first if it's open.
 

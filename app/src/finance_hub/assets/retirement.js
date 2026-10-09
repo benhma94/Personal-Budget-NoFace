@@ -772,7 +772,7 @@ window.HubRetirement = (() => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Unable to calculate the forecast.');
       if (!data.probabilistic) {
-        throw new Error('The running finance server predates the probabilistic planner. Close it, restart run.bat, then reload this page.');
+        throw new Error('The running finance server predates the probabilistic planner. Close it, restart NOFACE, then reload this page.');
       }
       if (sequence !== requestSequence) return;
       $('rt-error').textContent = '';
@@ -844,7 +844,7 @@ window.HubRetirement = (() => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Unable to load retirement source data.');
       if (data.defaults.annual_volatility == null) {
-        throw new Error('The running finance server is out of date. Close it, restart run.bat, then reload this page.');
+        throw new Error('The running finance server is out of date. Close it, restart NOFACE, then reload this page.');
       }
       live = data;
       renderSources();

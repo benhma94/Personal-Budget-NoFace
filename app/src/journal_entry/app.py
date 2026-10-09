@@ -383,10 +383,10 @@ class JournalApp:
         this app never posted (row_number outside every recorded batch's
         range) and refuses if the row's current values don't match
         `expected` -- e.g. it was hand-edited in Excel since the edit form
-        was opened.
+        was opened. A zero amount is allowed: it is how a posted row is
+        "deleted" without removing it, which would shift every later row
+        and break the recorded batch ranges.
         """
-        if amount == 0:
-            raise ValueError("amount must not be zero")
         if not any(
             batch["first_row"] <= row_number <= batch["last_row"]
             for batch in self.store.list_batches()

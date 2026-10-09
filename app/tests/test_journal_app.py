@@ -285,7 +285,7 @@ def test_update_journal_row_outside_any_batch_raises(app):
         )
 
 
-def test_update_journal_row_zero_amount_raises(app):
+def test_update_journal_row_zero_amount_writes_zero(app):
     mapping = {"date_col": "Date", "desc_col": "Description", "amount_col": "Amount"}
     app.import_csv(_CSV, account="Rewards Card", mapping=mapping, date_format="%Y-%m-%d")
     fingerprints = [t["fingerprint"] for t in app.list_transactions()]
@@ -293,11 +293,14 @@ def test_update_journal_row_zero_amount_raises(app):
     result = app.post(date(2026, 8, 30))
     original = app.batch_lines(result["batch_id"])[0]
 
-    with pytest.raises(ValueError):
-        app.update_journal_row(
-            original["row_number"], posting_date=date(2026, 8, 31), debit="Food",
-            credit="Rewards Card", amount=0.0, note="x", expected=original,
-        )
+    app.update_journal_row(
+        original["row_number"], posting_date=date(2026, 8, 30), debit="Food",
+        credit="Rewards Card", amount=0.0, note="[deleted] note", expected=original,
+    )
+
+    updated = app.batch_lines(result["batch_id"])[0]
+    assert updated["amount"] == 0.0
+    assert updated["note"] == "[deleted] note"
 
 
 def test_update_journal_row_stale_expected_raises_conflict_without_writing(app):

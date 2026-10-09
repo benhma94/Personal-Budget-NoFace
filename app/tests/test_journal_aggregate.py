@@ -56,17 +56,18 @@ def test_zero_amount_rows_are_skipped():
     assert len(skipped) == 1
 
 
-def test_representative_note_picks_most_common_nonblank():
+def test_different_notes_on_same_account_pair_stay_separate_lines():
     rows = [
-        _tx("Rewards Card", -1, "Food", "Food", "a"),
-        _tx("Rewards Card", -1, "Food", "Food", "b"),
-        _tx("Rewards Card", -1, "Food", "Snacks", "c"),
+        _tx("Cash", -932, "Shopping", "Ikea", "a"),
+        _tx("Cash", -60, "Shopping", "Eric", "b"),
+        _tx("Cash", -8, "Shopping", "Ikea ", "c"),
     ]
     lines, _ = build_posting_lines(rows, [], date(2026, 8, 30))
-    assert lines[0].note == "Food"
+    by_note = {line.note: line.amount for line in lines}
+    assert by_note == {"Ikea": 940, "Eric": 60}
 
 
-def test_representative_note_falls_back_to_category_when_all_blank():
+def test_note_falls_back_to_category_when_blank():
     rows = [_tx("Rewards Card", -1, "Food", "", "a")]
     lines, _ = build_posting_lines(rows, [], date(2026, 8, 30))
     assert lines[0].note == "Food"

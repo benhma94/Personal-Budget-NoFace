@@ -234,7 +234,7 @@ def test_retirement_js_wires_defaults_forecast_and_local_persistence():
     assert "financeHub.retirement.v3" in js
     assert "financeHub.retirement.v2" in js
     assert "if (!data.probabilistic)" in js
-    assert "restart run.bat" in js
+    assert "restart NOFACE" in js
     assert "localStorage" in js
     assert "MONEY_INPUT" in js
     assert "replace(/,/g, '')" in js
@@ -388,3 +388,10 @@ def test_journal_review_keeps_its_scroll_position_across_a_row_edit():
     assert "preventScroll:true" in js  # focus must not fight the restore
     assert 'id="rv-table-wrap"' in js
     assert "repaintReviewTable" in js
+
+
+def test_shell_header_shows_noface_brand():
+    shell = _read("shell.html")
+    assert "NOFACE" in shell
+    assert "Net-worth, Outflows, Financial Accounts, Cashflow &amp; Expenses" in shell
+    assert "brand-mark" in shell

@@ -105,8 +105,34 @@
 .view-budget .empty { color: var(--muted); padding: 30px; text-align: center; }
 .view-budget .footer { color: var(--muted); font-size: 11px; text-align: right; margin-top: 14px; }
 
+/* Compact tier for small laptops: same layout, less padding and smaller
+   headline numbers/charts so tiles stop dwarfing their contents. */
+@media (max-width: 1440px), (max-height: 820px) {
+  .view-budget.hub-view { padding: 18px; }
+  .view-budget .top { margin-bottom: 16px; }
+  .view-budget h1 { font-size: 28px; }
+  .view-budget .cards { gap: 10px; margin-bottom: 12px; }
+  .view-budget .card { padding: 12px 14px; }
+  .view-budget .value { font-size: 21px; margin: 5px 0 2px; }
+  .view-budget .grid { gap: 12px; margin-bottom: 12px; }
+  .view-budget .panel { padding: 14px; }
+  .view-budget .title-row { margin-bottom: 10px; }
+  .view-budget .chart { height: 210px; }
+  .view-budget .chart.tall { height: 270px; }
+  .view-budget .spending-legend { max-height: 210px; }
+  .view-budget .account-total { font-size: 19px; }
+  .view-budget th, .view-budget td { padding: 7px 8px; }
+  .view-budget .table-wrap { max-height: 380px; }
+}
+/* Step the card grid down gradually (6 -> 3 -> 2 -> 1) rather than jumping
+   straight to 2, which left a few huge tiles with mostly blank space. */
 @media (max-width: 1050px) {
-  .view-budget .cards { grid-template-columns: repeat(2,1fr); }
+  .view-budget .cards { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .view-budget .grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .view-budget .spending-layout { grid-template-columns: minmax(0,1fr) 150px; }
+}
+@media (max-width: 820px) {
+  .view-budget .cards { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .view-budget .income-card { grid-column: span 2; }
   .view-budget .grid { grid-template-columns: 1fr; }
   .view-budget .top { align-items: stretch; flex-direction: column; }

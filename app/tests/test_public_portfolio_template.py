@@ -18,4 +18,4 @@ def test_public_portfolio_template_is_usable():
     assert sum(weight for _, weight in config.benchmark_blend) == 1
     assert read_price_overrides(TEMPLATE) == {}
     assert read_instrument_map(TEMPLATE) == {}
-    assert public_path(Path("examples/Portfolio Template.xlsx"))
+    assert public_path(Path("app/examples/Portfolio Template.xlsx"))

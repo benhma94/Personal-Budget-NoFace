@@ -69,6 +69,13 @@
 .view-journal .close-alert.warning { border-color: var(--gold); color: var(--gold); background: rgba(246,200,95,.06); }
 .view-journal .close-alert.blocker { border-color: var(--red); color: var(--red); background: rgba(255,112,112,.06); }
 
+/* Compact tier for small laptops. */
+@media (max-width: 1440px), (max-height: 820px) {
+  .view-journal.hub-view { padding: 18px; }
+  .view-journal .panel, .view-journal .close-card { padding: 14px; }
+  .view-journal .stat .n { font-size: 18px; }
+}
+
 @media (max-width: 620px) {
   .view-journal.hub-view { padding: 14px; }
   .view-journal .close-grid { grid-template-columns: 1fr; }
