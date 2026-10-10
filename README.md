@@ -9,6 +9,30 @@ bank CSVs into a categorized journal, tracks budget vs actual, and reports
 portfolio performance and risk against a blended benchmark. All data stays in
 the project folder on your machine.
 
+## Install (Windows)
+
+1. Download `NOFACE-win-x64-Setup.exe` from the latest
+   [release](https://github.com/benhma94/Personal-Budget-NoFace/releases/latest).
+2. Run it. The build is not code-signed, so Windows SmartScreen may warn on
+   first run: choose **More info → Run anyway**.
+
+NOFACE installs for your user account, adds a Start menu and desktop shortcut,
+and opens `http://127.0.0.1:8765` in your browser. No Python or uv is needed.
+
+- **Your data** lives in `Documents\NOFACE\data`. On first run NOFACE copies the
+  example workbooks there (`Personal Budget.xlsx`, `portfolio.xlsx`) so every tab
+  works immediately; replace them with your own. Logs are in `Documents\NOFACE\logs`.
+- **Another folder:** set the user environment variable `NOFACE_HOME` to a folder
+  that contains (or will contain) `data\`, for example an existing source
+  checkout's `app` folder.
+- **Updates:** each start checks the releases page, downloads a new version in the
+  background, and installs it after NOFACE closes. The next start runs the new
+  version.
+- **Uninstall:** Windows Settings → Apps. Your `Documents\NOFACE` folder is kept.
+
+The rest of this README covers running from source, which is also how to develop
+NOFACE.
+
 ## Folder layout
 
 The repo root holds only `NoFace.lnk` (plus this README and the license).
@@ -16,7 +40,7 @@ Everything else lives in `app\`: the code (`src\`, `tests\`, `scripts\`),
 setup scripts, the runtime, logs, and your private data in `app\data\`.
 Unless stated otherwise, paths and commands below are relative to `app\`.
 
-## Quick start (5 minutes)
+## Run from source (5 minutes)
 
 **Requirements:** Windows 10 or later and [uv](https://docs.astral.sh/uv/getting-started/installation/)
 (`powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`).

@@ -97,3 +97,24 @@ def test_runtime_dir_ignores_non_noface_python(tmp_path):
     assert launch.runtime_dir(str(exe)) is None
     (tmp_path / "runtime" / "site-packages").mkdir()
     assert launch.runtime_dir(str(exe)) == (tmp_path / "runtime").resolve()
+
+
+def test_home_dir_prefers_noface_home(tmp_path):
+    assert launch.home_dir({"NOFACE_HOME": str(tmp_path)}) == tmp_path
+    assert launch.home_dir({}) == launch.documents_dir() / "NOFACE"
+
+
+def test_seed_examples_copies_only_missing_workbooks(tmp_path):
+    examples = Path(__file__).parents[1] / "examples"
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "portfolio.xlsx").write_bytes(b"mine")
+    assert launch.seed_examples(data, examples) == ["Personal Budget.xlsx"]
+    assert (data / "Personal Budget.xlsx").read_bytes() == (
+        examples / "Personal Budget Template.xlsx").read_bytes()
+    assert (data / "portfolio.xlsx").read_bytes() == b"mine"
+    assert launch.seed_examples(data, examples) == []
+
+
+def test_updater_without_an_update_does_nothing():
+    launch.Updater().apply_on_exit()  # no download yet: must not raise

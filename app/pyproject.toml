@@ -14,6 +14,9 @@ dependencies = [
     "numpy>=1.26",
     "openpyxl>=3.1",
     "scipy>=1.13",
+    # Installer/updater for the packaged NOFACE.exe; pinned to the vpk CLI in
+    # ../.config/dotnet-tools.json.
+    "velopack==1.2.161; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -21,6 +24,9 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
 ]
+
+[dependency-groups]
+release = ["pyinstaller>=6.10"]
 
 [project.scripts]
 finance-hub = "finance_hub.cli:main"
