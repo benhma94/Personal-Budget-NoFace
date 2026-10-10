@@ -1,0 +1,36 @@
+name: Publish release when its pull request merges
+
+# Release pull requests (branches named release/v<version>) come from the NOFACE
+# maintainers' publish workflow, which also creates a draft release with the
+# installer. Merging publishes that release at the merge commit; closing the pull
+# request without merging deletes the draft.
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: >-
+      startsWith(github.head_ref, 'release/v') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish or discard the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_REF: ${{ github.head_ref }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          tag="${HEAD_REF#release/}"
+          if [ "$MERGED" = "true" ]; then
+            gh release edit "$tag" --repo "$REPOSITORY" --target "$MERGE_SHA" --draft=false --latest
+          else
+            gh release delete "$tag" --repo "$REPOSITORY" --yes
+          fi
+          gh api --method DELETE "repos/$REPOSITORY/git/refs/heads/$HEAD_REF" || true

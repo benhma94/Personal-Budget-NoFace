@@ -16,16 +16,21 @@ from pathlib import Path
 APP = Path(__file__).resolve().parents[1]
 ROOT = APP.parent
 PUBLIC_FILES = {
-    ".gitignore", "LICENSE", "README.md",
+    ".gitignore", "LICENSE", "README.md", ".config/dotnet-tools.json",
     "app/.python-version", "app/launch.pyw", "app/pyproject.toml", "app/setup.ps1",
     "app/setup_lseg_app_key.bat", "app/setup_lseg_app_key.ps1", "app/uv.lock",
     "app/data/.gitkeep",
     "app/examples/Personal Budget Template.xlsx",
     "app/examples/Portfolio Template.xlsx",
 }
-PUBLIC_DIRS = {".github", "app/scripts", "app/src", "app/tests"}
+PUBLIC_DIRS = {".github", "app/packaging", "app/scripts", "app/src", "app/tests"}
 # Needs the private repo's PUBLIC_REPO_TOKEN secret, so it would only fail publicly.
 EXCLUDED = {".github/workflows/publish-public.yml"}
+# Files that only belong in the public repo, kept elsewhere here so they never
+# run in the private repo: source path -> snapshot path.
+RELOCATED = {
+    "app/scripts/public/release-on-merge.yml": ".github/workflows/release-on-merge.yml",
+}
 
 
 def public_path(path: Path) -> bool:
@@ -49,13 +54,19 @@ def build_snapshot(destination: Path) -> int:
         if not entry:
             continue
         relative = Path(entry)
-        if relative.is_absolute() or ".." in relative.parts or not public_path(relative):
+        if relative.is_absolute() or ".." in relative.parts:
+            continue
+        if relative.as_posix() in RELOCATED:
+            target = Path(RELOCATED[relative.as_posix()])
+        elif public_path(relative):
+            target = relative
+        else:
             continue
         candidate = ROOT / relative
         source = candidate.resolve()
         if candidate.is_symlink() or not source.is_relative_to(ROOT) or not source.is_file():
             continue
-        selected.append((source, relative))
+        selected.append((source, target))
 
     destination.mkdir(parents=True)
     for source, relative in selected:

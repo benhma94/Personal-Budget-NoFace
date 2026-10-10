@@ -11,12 +11,18 @@ network-zone security prompts that .bat/.vbs files on the NAS share trigger.
 Dependencies come from the per-PC runtime mirror built by setup.ps1, so this
 file must stay stdlib-only. Running it with any other Python (e.g. the dev
 venv: `python launch.pyw`) skips the mirror checks.
+
+The same file is the entry point of the installed NOFACE.exe (PyInstaller, see
+packaging\\noface.spec). When frozen, data lives in Documents\\NOFACE (or
+NOFACE_HOME), missing workbooks are seeded from the bundled examples, and
+Velopack updates the app from GitHub Releases.
 """
 from __future__ import annotations
 
 import atexit
 import json
 import os
+import shutil
 import socket
 import sys
 import threading
@@ -25,7 +31,39 @@ import traceback
 import webbrowser
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+FROZEN = bool(getattr(sys, "frozen", False))
+# Read-only files shipped with the app: this folder, or the PyInstaller bundle.
+BUNDLE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+UPDATE_REPOSITORY = "https://github.com/benhma94/Personal-Budget-NoFace"
+UPDATE_CHANNEL = "win-x64"  # must match --channel in scripts\build_windows.ps1
+EXAMPLES = {
+    "Personal Budget.xlsx": "Personal Budget Template.xlsx",
+    "portfolio.xlsx": "Portfolio Template.xlsx",
+}
+
+
+def documents_dir() -> Path:
+    """The user's Documents folder, following OneDrive/folder redirection."""
+    try:
+        import winreg
+
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path) as key:
+            value, _ = winreg.QueryValueEx(key, "Personal")
+        if value:
+            return Path(os.path.expandvars(str(value)))
+    except (ImportError, OSError):
+        pass
+    return Path.home() / "Documents"
+
+
+def home_dir(environ: dict[str, str] | None = None) -> Path:
+    """Where the installed app keeps data\\ and logs\\."""
+    override = (os.environ if environ is None else environ).get("NOFACE_HOME")
+    return Path(override) if override else documents_dir() / "NOFACE"
+
+
+ROOT = home_dir() if FROZEN else Path(__file__).resolve().parent
 PORT = 8765
 LOCK_STALE_SECONDS = 120
 LOCK_REFRESH_SECONDS = 30
@@ -118,6 +156,76 @@ def _keep_lock_fresh(path: Path, stop: threading.Event) -> None:
             pass  # NAS hiccup; try again next tick
 
 
+def seed_examples(data: Path, examples: Path) -> list[str]:
+    """Copy the example workbooks into `data` where none exist yet."""
+    data.mkdir(parents=True, exist_ok=True)
+    seeded = []
+    for target, example in EXAMPLES.items():
+        if not (data / target).exists() and (examples / example).is_file():
+            shutil.copyfile(examples / example, data / target)
+            seeded.append(target)
+    return seeded
+
+
+class Updater:
+    """Background Velopack check and download; the update installs once NOFACE exits.
+
+    Every failure (not installed, offline, rate-limited) is logged and ignored:
+    updates must never stop the app from running.
+    """
+
+    def __init__(self, repository: str = UPDATE_REPOSITORY) -> None:
+        self.repository = repository
+        self.manager = None
+        self.update = None
+        self.thread = threading.Thread(target=self._check, daemon=True)
+
+    def _check(self) -> None:
+        try:
+            import velopack
+
+            manager = velopack.UpdateManager(
+                velopack.GithubSource(self.repository),
+                velopack.UpdateOptions(
+                    AllowVersionDowngrade=False,
+                    MaximumDeltasBeforeFallback=-1,
+                    ExplicitChannel=UPDATE_CHANNEL,
+                ),
+            )
+            update = manager.check_for_updates()
+            if update is None:
+                return
+            manager.download_updates(update)
+            self.manager, self.update = manager, update
+            print(f"NOFACE {update.TargetFullRelease.Version} downloaded; it installs on exit.")
+        except Exception as error:
+            print(f"Update check skipped: {error}")
+
+    def apply_on_exit(self) -> None:
+        if self.update is None:
+            return
+        try:
+            self.manager.wait_exit_then_apply_updates(self.update, silent=True, restart=False)
+        except Exception as error:
+            print(f"Update install skipped: {error}")
+
+
+def smoke_test() -> int:
+    """Packaging check for CI: deferred imports and bundled files are present."""
+    import finance_hub.server
+    import lseg.data  # noqa: F401  (imported lazily by the Portfolio refresh)
+    import portfolio_tracker.cli  # noqa: F401
+
+    required = [BUNDLE / "examples" / name for name in EXAMPLES.values()]
+    required.append(finance_hub.server._ASSET_DIR / "shell.html")
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        print("Missing bundled files: " + ", ".join(missing))
+        return 1
+    print("NOFACE smoke test passed")
+    return 0
+
+
 def load_lseg_key() -> None:
     if os.environ.get("LSEG_APP_KEY"):
         return
@@ -133,6 +241,18 @@ def load_lseg_key() -> None:
 
 
 def _run(argv: list[str]) -> int:
+    if FROZEN:
+        import velopack
+
+        # Runs Velopack's install/update/uninstall hooks, which may exit.
+        velopack.App().run()
+        if argv[:1] == ["--smoke-test"]:
+            return smoke_test()
+        ROOT.mkdir(parents=True, exist_ok=True)
+        os.chdir(ROOT)
+        seed_examples(ROOT / "data", BUNDLE / "examples")
+        return _serve(argv)
+
     os.chdir(ROOT)
     # Every import probes sys.path entries in order, and each probe of a NAS
     # folder is a network round trip. Drop this script's folder and put the
@@ -146,13 +266,17 @@ def _run(argv: list[str]) -> int:
         if stamp_is_stale(ROOT / ".runtime" / "stamp.txt", runtime / "stamp.txt"):
             show_error("The NOFACE runtime was updated. Run setup.ps1 on this PC, then try again.")
             return 1
+    return _serve(argv)
 
+
+def _serve(argv: list[str]) -> int:
     if server_running():
         webbrowser.open(f"http://127.0.0.1:{PORT}/")
         return 0
 
-    if not (ROOT / "data" / "Personal Budget.xlsx").is_file():
-        show_error(r"app\data\Personal Budget.xlsx was not found. Place your workbook there first.")
+    workbook = ROOT / "data" / "Personal Budget.xlsx"
+    if not workbook.is_file():
+        show_error(f"{workbook} was not found. Place your workbook there first.")
         return 1
 
     lock = ROOT / "data" / ".noface.lock"
@@ -167,14 +291,19 @@ def _run(argv: list[str]) -> int:
         load_lseg_key()
         LOG_PATH.parent.mkdir(exist_ok=True)
         sys.stdout = sys.stderr = open(LOG_PATH, "w", encoding="utf-8", buffering=1)
+        updater = Updater() if FROZEN else None
+        if updater is not None:
+            updater.thread.start()
         from finance_hub.cli import main as hub_main
 
         code = hub_main(argv)
+        if updater is not None:
+            updater.apply_on_exit()
     finally:
         stop.set()
         release_lock(lock)
     if code:
-        show_error(r"Finance Hub exited with an error. See app\logs\finance-hub.log for details.")
+        show_error(f"Finance Hub exited with an error. See {LOG_PATH} for details.")
     return code
 
 
@@ -193,7 +322,7 @@ def main(argv: list[str] | None = None) -> int:
         except OSError:
             pass
         show_error(f"NOFACE failed to start:\n\n{text.strip().splitlines()[-1]}\n\n"
-                   r"See app\logs\finance-hub.log for details.")
+                   f"See {LOG_PATH} for details.")
         return 1
 
 
