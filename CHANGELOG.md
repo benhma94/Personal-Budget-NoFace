@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1 — 2026-10-11
+
+Version 0.1.0 → 0.1.1.
+
+- Implement code changes to enhance functionality and improve performance
+- feat: Add developer guide and update README for improved onboarding
+
+Drafted from commit messages by the publish workflow.
+
 ## 0.1.0 — 2026-10-10
 
 First release with a Windows installer: 0.1.0.

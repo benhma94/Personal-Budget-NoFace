@@ -226,6 +226,10 @@ if (-not $uncRoot) {
 # ---------------------------------------------------------------------------
 $lnkPath = Join-Path $repoRoot 'NoFace.lnk'
 Write-Step "Creating $lnkPath"
+# Keep the icon on local disk, like the runtime, so Explorer need not load it
+# from the share. Icons are refreshed even when the dependency stamp is current.
+$iconPath = Join-Path $env:LOCALAPPDATA 'NoFace\noface.ico'
+Copy-Item -LiteralPath (Join-Path $root 'src\finance_hub\assets\noface.ico') -Destination $iconPath -Force
 # Literal env var so the same .lnk resolves to each user's own local mirror.
 $pythonw = '%LOCALAPPDATA%\NoFace\runtime\python\pythonw.exe'
 $shell = New-Object -ComObject WScript.Shell
@@ -234,7 +238,7 @@ $shortcut.TargetPath = $pythonw
 $shortcut.Arguments = 'launch.pyw'
 $shortcut.WorkingDirectory = $root
 $shortcut.Description = 'NOFACE'
-$shortcut.IconLocation = "$pythonw,0"
+$shortcut.IconLocation = '%LOCALAPPDATA%\NoFace\noface.ico,0'
 $shortcut.Save()
 [void][Runtime.InteropServices.Marshal]::ReleaseComObject($shell)
 

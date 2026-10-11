@@ -17,7 +17,8 @@ APP = Path(__file__).resolve().parents[1]
 ROOT = APP.parent
 PUBLIC_FILES = {
     ".gitignore", "LICENSE", "README.md", ".config/dotnet-tools.json",
-    "app/.python-version", "app/launch.pyw", "app/pyproject.toml", "app/setup.ps1",
+    "app/.python-version", "app/DEVELOPMENT.md", "app/launch.pyw",
+    "app/pyproject.toml", "app/setup.ps1",
     "app/setup_lseg_app_key.bat", "app/setup_lseg_app_key.ps1", "app/uv.lock",
     "app/data/.gitkeep",
     "app/examples/Personal Budget Template.xlsx",
