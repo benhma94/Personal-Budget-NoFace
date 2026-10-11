@@ -44,6 +44,7 @@ exe = EXE(
     exclude_binaries=True,
     name="NOFACE",
     console=False,
+    icon=str(source / "finance_hub" / "assets" / "noface.ico"),
 )
 app = COLLECT(
     exe,

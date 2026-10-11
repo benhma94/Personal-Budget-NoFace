@@ -15,6 +15,7 @@ $ErrorActionPreference = 'Stop'
 
 $app = Split-Path -Parent $PSScriptRoot
 $repoRoot = Split-Path -Parent $app
+$icon = Join-Path $app 'src\finance_hub\assets\noface.ico'
 $project = Get-Content -LiteralPath (Join-Path $app 'pyproject.toml') -Raw
 if ($project -notmatch '(?m)^version = "(\d+\.\d+\.\d+)"\r?$') {
     throw 'A three-part project version is required in pyproject.toml.'
@@ -75,6 +76,7 @@ Push-Location $repoRoot
 try {
     & dotnet tool run vpk -- pack --packId NOFACE --packVersion $version `
         --packDir $bundle --mainExe NOFACE.exe --packTitle NOFACE `
+        --icon $icon `
         --channel win-x64 --runtime win-x64 --delta None --noPortable --yes `
         --releaseNotes $notes --outputDir $output
     if ($LASTEXITCODE -ne 0) { throw "Velopack packaging failed with exit code $LASTEXITCODE." }
