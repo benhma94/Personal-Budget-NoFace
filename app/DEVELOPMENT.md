@@ -5,9 +5,14 @@ details behind each tab. Most people should install NOFACE from the
 [latest release](https://github.com/benhma94/Personal-Budget-NoFace/releases/latest)
 instead; see the main [README](../README.md).
 
-The installed app keeps its data in `Documents\NOFACE`. To use another folder,
-set the user environment variable `NOFACE_HOME` to a folder that contains (or
-will contain) `data\`, for example an existing source checkout's `app` folder.
+The installed app keeps its data in `Documents\NOFACE\data` and its logs in
+`Documents\NOFACE\logs`. To read the workbooks from another folder, launch it with
+Shift held (or run `NOFACE.exe --choose-folder`) and pick the folder that holds
+`Personal Budget.xlsx`, for example a source checkout's `app\data`. The choice is
+saved per PC in `%LOCALAPPDATA%\NoFace\settings.json`, and NOFACE offers the
+picker again if that folder has no workbook. The user environment variable
+`NOFACE_HOME` still overrides both: it names a folder that contains (or will
+contain) `data\`.
 
 ## Folder layout
 

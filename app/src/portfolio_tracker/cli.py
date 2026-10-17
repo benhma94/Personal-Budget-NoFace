@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import json
 import sys
 from datetime import date, datetime, timedelta
@@ -76,7 +75,8 @@ def _run_main(argv: list[str]) -> int:
     if txn_warnings:
         print(f"  ({len(txn_warnings)} rows skipped — see Report_Meta)")
 
-    cache = None if args.no_cache else Cache(Path(args.cache_path))
+    cache_path = Path(args.cache_path) if args.cache_path else workbook_path.parent / "cache.sqlite"
+    cache = None if args.no_cache else Cache(cache_path)
     yahoo = YahooDataSource(cache=cache, classification_ttl_days=cfg.cache_ttl_classifications_days)
     lseg = LSEGDataSource(
         identifiers=identifiers,
@@ -199,7 +199,8 @@ def _parse_args(argv):
     parser = argparse.ArgumentParser(prog="portfolio-tracker")
     parser.add_argument("--workbook", default="data/portfolio.xlsx", help="Path to the portfolio workbook")
     parser.add_argument("--transactions-csv", help="Wealthsimple activities CSV (overrides auto-detect)")
-    parser.add_argument("--cache-path", default="data/cache.sqlite", help="SQLite cache path")
+    parser.add_argument("--cache-path",
+                        help="SQLite cache path (default: cache.sqlite next to the workbook)")
     parser.add_argument("--no-cache", action="store_true", help="Bypass and overwrite the cache")
     parser.add_argument("--as-of", help="ISO date to use as the end-of-period (default: today)")
     parser.add_argument("--refresh-lseg", action="store_true",
@@ -225,19 +226,20 @@ def _write_payload_cache(payload: dict, path: Path) -> None:
 
 
 def _load_transactions(args, workbook_path):
-    """Auto-detect: --transactions-csv flag > data/activities-export-*.csv."""
+    """Auto-detect: --transactions-csv flag > activities-export-*.csv next to the workbook."""
     if args.transactions_csv:
         df, w = read_wealthsimple_csv(args.transactions_csv)
         return df, w, args.transactions_csv
 
-    candidates = sorted(glob.glob("data/activities-export-*.csv"))
+    candidates = sorted(str(p) for p in Path(workbook_path).parent.glob("activities-export-*.csv"))
     if candidates:
         path = candidates[-1]
         df, w = read_wealthsimple_csv(path)
         return df, w, path
 
     raise FileNotFoundError(
-        "No transactions CSV found. Place an activities-export-*.csv in data/ "
+        "No transactions CSV found. Place an activities-export-*.csv in "
+        f"{Path(workbook_path).parent} "
         "or pass --transactions-csv PATH."
     )
 

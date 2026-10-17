@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2 — 2026-10-17
+
+Version 0.1.1 → 0.1.2.
+
+- feat: Enhance folder selection and settings management for data directory
+
+Drafted from commit messages by the publish workflow.
+
 ## 0.1.1 — 2026-10-11
 
 Version 0.1.0 → 0.1.1.

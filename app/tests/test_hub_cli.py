@@ -118,3 +118,50 @@ def test_seed_examples_copies_only_missing_workbooks(tmp_path):
 
 def test_updater_without_an_update_does_nothing():
     launch.Updater().apply_on_exit()  # no download yet: must not raise
+
+
+def test_data_dir_prefers_noface_home_then_saved_choice(tmp_path):
+    saved = {"data_dir": str(tmp_path / "picked")}
+    assert launch.data_dir({"NOFACE_HOME": str(tmp_path)}, saved) == tmp_path / "data"
+    assert launch.data_dir({}, saved) == tmp_path / "picked"
+    assert launch.data_dir({}, {}) == launch.documents_dir() / "NOFACE" / "data"
+
+
+def test_settings_round_trip_and_tolerate_bad_files(tmp_path):
+    path = tmp_path / "NoFace" / "settings.json"
+    assert launch.load_settings(path) == {}
+    launch.save_settings({"data_dir": "Z:\data"}, path)
+    assert launch.load_settings(path) == {"data_dir": "Z:\data"}
+    path.write_text("not json", encoding="utf-8")
+    assert launch.load_settings(path) == {}
+    path.write_text("[]", encoding="utf-8")
+    assert launch.load_settings(path) == {}
+
+
+def test_resolve_data_dir_uses_saved_folder_with_workbook(tmp_path, monkeypatch):
+    picked = tmp_path / "picked"
+    picked.mkdir()
+    (picked / launch.WORKBOOK).write_bytes(b"mine")
+    monkeypatch.delenv("NOFACE_HOME", raising=False)
+    monkeypatch.setattr(launch, "load_settings", lambda: {"data_dir": str(picked)})
+    assert launch.resolve_data_dir(False, tmp_path / "examples") == picked
+
+
+def test_resolve_data_dir_saves_picked_folder(tmp_path, monkeypatch):
+    picked = tmp_path / "picked"
+    picked.mkdir()
+    (picked / launch.WORKBOOK).write_bytes(b"mine")
+    saved = {}
+    monkeypatch.delenv("NOFACE_HOME", raising=False)
+    monkeypatch.setattr(launch, "load_settings", lambda: {})
+    monkeypatch.setattr(launch, "save_settings", saved.update)
+    monkeypatch.setattr(launch, "choose_folder", lambda title: picked)
+    assert launch.resolve_data_dir(True, tmp_path / "examples") == picked
+    assert saved == {"data_dir": str(picked)}
+
+
+def test_resolve_data_dir_asks_when_saved_folder_is_missing(tmp_path, monkeypatch):
+    monkeypatch.delenv("NOFACE_HOME", raising=False)
+    monkeypatch.setattr(launch, "load_settings", lambda: {"data_dir": str(tmp_path / "gone")})
+    monkeypatch.setattr(launch, "ask", lambda message, buttons=launch.MB_YESNO: launch.IDNO)
+    assert launch.resolve_data_dir(False, tmp_path / "examples") is None
