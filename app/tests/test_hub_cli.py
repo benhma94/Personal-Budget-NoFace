@@ -138,6 +138,20 @@ def test_settings_round_trip_and_tolerate_bad_files(tmp_path):
     assert launch.load_settings(path) == {}
 
 
+def test_load_settings_falls_back_to_legacy_path(tmp_path):
+    path, legacy = tmp_path / "new" / "settings.json", tmp_path / "old" / "settings.json"
+    launch.save_settings({"data_dir": "old"}, legacy)
+    assert launch.load_settings(path, legacy) == {"data_dir": "old"}
+    launch.save_settings({"data_dir": "new"}, path)
+    assert launch.load_settings(path, legacy) == {"data_dir": "new"}
+
+
+def test_data_env_names_only_existing_files(tmp_path):
+    assert launch.data_env(tmp_path) == {}
+    (tmp_path / "profile.json").write_text("{}", encoding="utf-8")
+    assert launch.data_env(tmp_path) == {"FINANCE_PROFILE_PATH": str(tmp_path / "profile.json")}
+
+
 def test_resolve_data_dir_uses_saved_folder_with_workbook(tmp_path, monkeypatch):
     picked = tmp_path / "picked"
     picked.mkdir()
