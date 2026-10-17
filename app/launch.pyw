@@ -13,8 +13,11 @@ file must stay stdlib-only. Running it with any other Python (e.g. the dev
 venv: `python launch.pyw`) skips the mirror checks.
 
 The same file is the entry point of the installed NOFACE.exe (PyInstaller, see
-packaging\\noface.spec). When frozen, data lives in Documents\\NOFACE (or
-NOFACE_HOME), missing workbooks are seeded from the bundled examples, and
+packaging\\noface.spec). When frozen, logs live in Documents\\NOFACE (or
+NOFACE_HOME) and the workbooks in its data\\ subfolder, unless the user picked
+another data folder (saved in SETTINGS_PATH). The folder picker opens when the
+workbook is missing, on `NOFACE.exe --choose-folder`, or when Shift is held
+during launch. The default folder is seeded from the bundled examples, and
 Velopack updates the app from GitHub Releases.
 """
 from __future__ import annotations
@@ -36,10 +39,15 @@ FROZEN = bool(getattr(sys, "frozen", False))
 BUNDLE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 UPDATE_REPOSITORY = "https://github.com/benhma94/Personal-Budget-NoFace"
 UPDATE_CHANNEL = "win-x64"  # must match --channel in scripts\build_windows.ps1
+WORKBOOK = "Personal Budget.xlsx"
 EXAMPLES = {
-    "Personal Budget.xlsx": "Personal Budget Template.xlsx",
+    WORKBOOK: "Personal Budget Template.xlsx",
     "portfolio.xlsx": "Portfolio Template.xlsx",
 }
+# Per PC, since each PC may map the shared data folder to a different drive.
+SETTINGS_PATH = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "NoFace" / "settings.json"
+MB_YESNOCANCEL, MB_YESNO, MB_ICONQUESTION = 0x3, 0x4, 0x20
+IDCANCEL, IDYES, IDNO = 2, 6, 7
 
 
 def documents_dir() -> Path:
@@ -63,6 +71,27 @@ def home_dir(environ: dict[str, str] | None = None) -> Path:
     return Path(override) if override else documents_dir() / "NOFACE"
 
 
+def load_settings(path: Path = SETTINGS_PATH) -> dict:
+    try:
+        settings = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return settings if isinstance(settings, dict) else {}
+
+
+def save_settings(settings: dict, path: Path = SETTINGS_PATH) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+
+
+def data_dir(environ: dict[str, str] | None = None, settings: dict | None = None) -> Path:
+    """Where the installed app reads the workbooks: NOFACE_HOME, then the saved choice."""
+    if (os.environ if environ is None else environ).get("NOFACE_HOME"):
+        return home_dir(environ) / "data"
+    saved = (load_settings() if settings is None else settings).get("data_dir")
+    return Path(saved) if saved else home_dir(environ) / "data"
+
+
 ROOT = home_dir() if FROZEN else Path(__file__).resolve().parent
 PORT = 8765
 LOCK_STALE_SECONDS = 120
@@ -74,6 +103,86 @@ def show_error(message: str) -> None:
     import ctypes
 
     ctypes.windll.user32.MessageBoxW(None, message, "NOFACE", 0x10)
+
+
+def ask(message: str, buttons: int = MB_YESNO) -> int:
+    import ctypes
+
+    return ctypes.windll.user32.MessageBoxW(None, message, "NOFACE", buttons | MB_ICONQUESTION)
+
+
+def shift_held() -> bool:
+    import ctypes
+
+    return bool(ctypes.windll.user32.GetAsyncKeyState(0x10) & 0x8000)  # VK_SHIFT
+
+
+def choose_folder(title: str) -> Path | None:
+    """The Windows folder picker; None if cancelled. ctypes because tkinter isn't bundled."""
+    import ctypes
+    from ctypes import wintypes
+
+    class BROWSEINFOW(ctypes.Structure):
+        _fields_ = [
+            ("hwndOwner", wintypes.HWND),
+            ("pidlRoot", ctypes.c_void_p),
+            ("pszDisplayName", wintypes.LPWSTR),
+            ("lpszTitle", wintypes.LPCWSTR),
+            ("ulFlags", wintypes.UINT),
+            ("lpfn", ctypes.c_void_p),
+            ("lParam", wintypes.LPARAM),
+            ("iImage", ctypes.c_int),
+        ]
+
+    shell32, ole32 = ctypes.windll.shell32, ctypes.windll.ole32
+    shell32.SHBrowseForFolderW.argtypes = [ctypes.POINTER(BROWSEINFOW)]
+    shell32.SHBrowseForFolderW.restype = ctypes.c_void_p
+    shell32.SHGetPathFromIDListW.argtypes = [ctypes.c_void_p, wintypes.LPWSTR]
+    ole32.CoTaskMemFree.argtypes = [ctypes.c_void_p]
+    ole32.CoInitialize(None)  # the resizable new-style dialog needs COM
+    display = ctypes.create_unicode_buffer(260)
+    # BIF_RETURNONLYFSDIRS | BIF_EDITBOX | BIF_NEWDIALOGSTYLE
+    info = BROWSEINFOW(None, None, ctypes.cast(display, wintypes.LPWSTR), title,
+                       0x1 | 0x10 | 0x40, None, 0, 0)
+    pidl = shell32.SHBrowseForFolderW(ctypes.byref(info))
+    if not pidl:
+        return None
+    path = ctypes.create_unicode_buffer(260)
+    try:
+        found = shell32.SHGetPathFromIDListW(pidl, path)
+    finally:
+        ole32.CoTaskMemFree(pidl)
+    return Path(path.value) if found and path.value else None
+
+
+def resolve_data_dir(choose: bool, examples: Path) -> Path | None:
+    """The folder to serve, asking the user to pick one when needed. None means quit."""
+    settings = load_settings()
+    data = data_dir(settings=settings)
+    if not choose:
+        if (data / WORKBOOK).is_file():
+            return data
+        saved = settings.get("data_dir")
+        if not saved or data != Path(saved):  # the default folder: first run
+            seed_examples(data, examples)
+            return data
+        if ask(f"{WORKBOOK} wasn't found in\n{data}\n\nChoose another folder?") != IDYES:
+            return None
+    while True:
+        picked = choose_folder(f"Choose the folder that holds {WORKBOOK}")
+        if picked is None:  # keep the current folder when it still works
+            return data if choose and (data / WORKBOOK).is_file() else None
+        if not (picked / WORKBOOK).is_file():
+            answer = ask(f"{WORKBOOK} isn't in\n{picked}\n\n"
+                         "Start with the example workbooks there?", MB_YESNOCANCEL)
+            if answer == IDCANCEL:
+                return None
+            if answer == IDNO:
+                continue
+            seed_examples(picked, examples)
+        settings["data_dir"] = str(picked)
+        save_settings(settings)
+        return picked
 
 
 def runtime_dir(executable: str = sys.executable) -> Path | None:
@@ -248,10 +357,15 @@ def _run(argv: list[str]) -> int:
         velopack.App().run()
         if argv[:1] == ["--smoke-test"]:
             return smoke_test()
+        choose = argv[:1] == ["--choose-folder"]
+        if choose:
+            argv = argv[1:]
         ROOT.mkdir(parents=True, exist_ok=True)
         os.chdir(ROOT)
-        seed_examples(ROOT / "data", BUNDLE / "examples")
-        return _serve(argv)
+        data = resolve_data_dir(choose or shift_held(), BUNDLE / "examples")
+        if data is None:
+            return 0
+        return _serve(argv, data)
 
     os.chdir(ROOT)
     # Every import probes sys.path entries in order, and each probe of a NAS
@@ -266,20 +380,20 @@ def _run(argv: list[str]) -> int:
         if stamp_is_stale(ROOT / ".runtime" / "stamp.txt", runtime / "stamp.txt"):
             show_error("The NOFACE runtime was updated. Run setup.ps1 on this PC, then try again.")
             return 1
-    return _serve(argv)
+    return _serve(argv, ROOT / "data")
 
 
-def _serve(argv: list[str]) -> int:
+def _serve(argv: list[str], data: Path) -> int:
     if server_running():
         webbrowser.open(f"http://127.0.0.1:{PORT}/")
         return 0
 
-    workbook = ROOT / "data" / "Personal Budget.xlsx"
+    workbook = data / WORKBOOK
     if not workbook.is_file():
         show_error(f"{workbook} was not found. Place your workbook there first.")
         return 1
 
-    lock = ROOT / "data" / ".noface.lock"
+    lock = data / ".noface.lock"
     holder = acquire_lock(lock)
     if holder is not None:
         show_error(f"NOFACE is open on {holder}. Close it there first.")
@@ -289,6 +403,9 @@ def _serve(argv: list[str]) -> int:
     threading.Thread(target=_keep_lock_fresh, args=(lock, stop), daemon=True).start()
     try:
         load_lseg_key()
+        # Read at import time by budget_dashboard.profile and portfolio_tracker.symbols.
+        os.environ.setdefault("FINANCE_PROFILE_PATH", str(data / "profile.json"))
+        os.environ.setdefault("PORTFOLIO_SYMBOLS_PATH", str(data / "symbols.json"))
         LOG_PATH.parent.mkdir(exist_ok=True)
         sys.stdout = sys.stderr = open(LOG_PATH, "w", encoding="utf-8", buffering=1)
         updater = Updater() if FROZEN else None
@@ -296,7 +413,13 @@ def _serve(argv: list[str]) -> int:
             updater.thread.start()
         from finance_hub.cli import main as hub_main
 
-        code = hub_main(argv)
+        code = hub_main([
+            "--workbook", str(workbook),
+            "--portfolio-workbook", str(data / "portfolio.xlsx"),
+            "--portfolio-payload", str(data / "portfolio_payload.json"),
+            "--db", str(data / "journal_entry.sqlite"),
+            *argv,
+        ])
         if updater is not None:
             updater.apply_on_exit()
     finally:

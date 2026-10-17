@@ -34,6 +34,12 @@ Your files are kept in **Documents → NOFACE → data**:
 When you're ready, replace the examples with your own information. Close the
 files in Excel before saving changes from inside NOFACE.
 
+To keep your files somewhere else (another folder, a shared drive, or a synced
+folder), hold **Shift** while you open NOFACE and choose the folder that holds
+`Personal Budget.xlsx`. NOFACE remembers it. If that folder can't be found the
+next time, for example because a network drive isn't connected, NOFACE asks you
+to choose again.
+
 ## What's inside
 
 NOFACE has five tabs along the top of the window:

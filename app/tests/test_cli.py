@@ -187,3 +187,17 @@ def test_positions_table_drops_unpriceable_ticker():
 
     assert "MYSTERY" not in df["ticker"].tolist()
     assert "AAPL" in df["ticker"].tolist()
+
+
+def test_cache_path_defaults_to_next_to_the_workbook():
+    assert _parse_args([]).cache_path is None
+
+
+def test_transactions_csv_is_found_next_to_the_workbook(tmp_path, monkeypatch):
+    from portfolio_tracker import cli
+
+    (tmp_path / "activities-export-2026-01-01.csv").write_text("", encoding="utf-8")
+    (tmp_path / "activities-export-2026-02-01.csv").write_text("", encoding="utf-8")
+    monkeypatch.setattr(cli, "read_wealthsimple_csv", lambda path: ("df", []))
+    _, _, path = cli._load_transactions(_parse_args([]), tmp_path / "portfolio.xlsx")
+    assert path == str(tmp_path / "activities-export-2026-02-01.csv")
