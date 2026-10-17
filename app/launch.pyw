@@ -45,7 +45,11 @@ EXAMPLES = {
     "portfolio.xlsx": "Portfolio Template.xlsx",
 }
 # Per PC, since each PC may map the shared data folder to a different drive.
-SETTINGS_PATH = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "NoFace" / "settings.json"
+# Not in %LOCALAPPDATA%\NOFACE: that is Velopack's install folder (paths are
+# case-insensitive), which a reinstall or uninstall wipes.
+_LOCAL = Path(os.environ.get("LOCALAPPDATA") or Path.home())
+SETTINGS_PATH = _LOCAL / "NOFACE Settings" / "settings.json"
+LEGACY_SETTINGS_PATH = _LOCAL / "NoFace" / "settings.json"  # 0.1.2
 MB_YESNOCANCEL, MB_YESNO, MB_ICONQUESTION = 0x3, 0x4, 0x20
 IDCANCEL, IDYES, IDNO = 2, 6, 7
 
@@ -71,7 +75,9 @@ def home_dir(environ: dict[str, str] | None = None) -> Path:
     return Path(override) if override else documents_dir() / "NOFACE"
 
 
-def load_settings(path: Path = SETTINGS_PATH) -> dict:
+def load_settings(path: Path = SETTINGS_PATH, legacy: Path | None = LEGACY_SETTINGS_PATH) -> dict:
+    if legacy is not None and not path.is_file():
+        path = legacy
     try:
         settings = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -349,8 +355,20 @@ def load_lseg_key() -> None:
         os.environ["LSEG_APP_KEY"] = str(value)
 
 
+def data_env(data: Path) -> dict[str, str]:
+    """Env vars pointing at the optional profile/symbols files that exist in `data`.
+
+    Setting them makes the files required, so a missing one is left unset and
+    the built-in defaults load instead.
+    """
+    files = {"FINANCE_PROFILE_PATH": "profile.json", "PORTFOLIO_SYMBOLS_PATH": "symbols.json"}
+    return {name: str(data / file) for name, file in files.items() if (data / file).is_file()}
+
+
 def _run(argv: list[str]) -> int:
     if FROZEN:
+        # Read before the slow startup below, so a quick Shift press still counts.
+        shift = shift_held()
         import velopack
 
         # Runs Velopack's install/update/uninstall hooks, which may exit.
@@ -362,8 +380,13 @@ def _run(argv: list[str]) -> int:
             argv = argv[1:]
         ROOT.mkdir(parents=True, exist_ok=True)
         os.chdir(ROOT)
-        data = resolve_data_dir(choose or shift_held(), BUNDLE / "examples")
+        choose = choose or shift
+        data = resolve_data_dir(choose, BUNDLE / "examples")
         if data is None:
+            return 0
+        if choose and server_running():
+            show_error("NOFACE is already open. Close it (or wait for it to shut down), "
+                       f"then open it again to use\n{data}")
             return 0
         return _serve(argv, data)
 
@@ -404,8 +427,8 @@ def _serve(argv: list[str], data: Path) -> int:
     try:
         load_lseg_key()
         # Read at import time by budget_dashboard.profile and portfolio_tracker.symbols.
-        os.environ.setdefault("FINANCE_PROFILE_PATH", str(data / "profile.json"))
-        os.environ.setdefault("PORTFOLIO_SYMBOLS_PATH", str(data / "symbols.json"))
+        for name, value in data_env(data).items():
+            os.environ.setdefault(name, value)
         LOG_PATH.parent.mkdir(exist_ok=True)
         sys.stdout = sys.stderr = open(LOG_PATH, "w", encoding="utf-8", buffering=1)
         updater = Updater() if FROZEN else None

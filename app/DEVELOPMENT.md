@@ -9,7 +9,9 @@ The installed app keeps its data in `Documents\NOFACE\data` and its logs in
 `Documents\NOFACE\logs`. To read the workbooks from another folder, launch it with
 Shift held (or run `NOFACE.exe --choose-folder`) and pick the folder that holds
 `Personal Budget.xlsx`, for example a source checkout's `app\data`. The choice is
-saved per PC in `%LOCALAPPDATA%\NoFace\settings.json`, and NOFACE offers the
+saved per PC in `%LOCALAPPDATA%\NOFACE Settings\settings.json` (outside the
+install folder `%LOCALAPPDATA%\NOFACE`, which reinstalling wipes; a choice saved
+by 0.1.2 in `%LOCALAPPDATA%\NoFace` is still read), and NOFACE offers the
 picker again if that folder has no workbook. The user environment variable
 `NOFACE_HOME` still overrides both: it names a folder that contains (or will
 contain) `data\`.
