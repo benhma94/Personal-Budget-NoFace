@@ -188,7 +188,8 @@ function showMappingForm(filename,text,sniff,existing){
       <h2>${existing?'Edit layout':'New format detected'} — ${esc(filename)}</h2>
       <div class="hint">Headers: ${headers.map(esc).join(', ')}</div>
       <div class="mapping-grid">
-        <div class="field"><label>This file is for</label><select id="m-account">${accountOptions(existing?existing.default_account:undefined)}</select></div>
+        <div class="field"><label>This file is for</label><input type="text" id="m-account" list="m-account-list" autocomplete="off" placeholder="Type to search accounts" value="${esc(existing?existing.default_account:'')}">
+          <datalist id="m-account-list">${State.accounts.map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
         <div class="field"><label>Date column</label><select id="m-date">${headers.map(h=>opt(h,dateCol)).join('')}</select></div>
         <div class="field"><label>Date format</label>
           <select id="m-dateformat-preset">${
@@ -254,6 +255,7 @@ function showMappingForm(filename,text,sniff,existing){
       : {date_col:$('#m-date').value, desc_col:$('#m-desc').value, amount_col:$('#m-amount').value, sign:+$('#m-sign').value};
     const account=$('#m-account').value, dateFormat=$('#m-dateformat').value, label=$('#m-label').value;
     if(!account){toast('Choose which account this file belongs to',false);return}
+    if(!State.accounts.includes(account)){toast('Pick an account from the list',false);return}
     try{
       await api('POST','/api/import/mapping',{
         header_signature:sniff.header_signature, label, default_account:account, mapping:newMapping, date_format:dateFormat,

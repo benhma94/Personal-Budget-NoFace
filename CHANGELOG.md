@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4 — 2026-10-19
+
+Version 0.1.3 → 0.1.4.
+
+- feat: Add support for displaying amounts in cents and improve account selection in mapping form
+
+Drafted from commit messages by the publish workflow.
+
 ## 0.1.3 — 2026-10-17
 
 Version 0.1.2 → 0.1.3.
