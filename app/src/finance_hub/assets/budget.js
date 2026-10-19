@@ -12,6 +12,8 @@ window.HubBudget = (() => {
   const $ = id => document.getElementById(id);
   const money = v => CAD.format(v||0);
   const signed = v => (v>=0?'+':'')+money(v);
+  const cents = v => BALANCE_CAD.format(v||0);
+  const signedCents = v => (v>=0?'+':'')+cents(v);
   const color = v => v>=0?'good':'bad';
   const SPENDING_COLORS = ['#6c8cff','#42d6a4','#f6c85f','#ff7070','#a78bfa','#38bdf8','#fb923c','#94a3b8','#f472b6','#2dd4bf','#c084fc','#facc15','#60a5fa','#4ade80','#f87171','#a3e635','#e879f9','#22d3ee','#fbbf24','#818cf8'];
   const TX_PAGE_SIZE = 100;
@@ -115,8 +117,9 @@ window.HubBudget = (() => {
     if(yoy&&comparisonData&&viewData.savings_rate!=null&&comparisonData.savings_rate!=null){const delta=viewData.savings_rate-comparisonData.savings_rate;$('saving-cmp').textContent=`${delta>=0?'+':''}${(delta*100).toFixed(1)} pts vs prior year`;$('saving-cmp').className='compare '+color(delta)}
     else {$('saving-cmp').textContent=yoy?'Prior-year comparison unavailable':`${money(viewData.savings)} tagged savings`;$('saving-cmp').className='compare'}
     $('networth').textContent=money(B.net_worth);
-    const previous=yoy?comparisonKeys[comparisonKeys.length-1]:D.periods[D.periods.indexOf(end)-1],delta=previous?B.net_worth-D.balances[previous].net_worth:null;
-    $('networth-cmp').textContent=delta==null?(yoy?'Prior-year comparison unavailable':label):`${signed(delta)} from ${yoy?'prior year':'prior month'}`;
+    const priorDec=`${+end.slice(0,4)-1}-12`,ytd=mode==='ytd';
+    const previous=yoy?comparisonKeys[comparisonKeys.length-1]:ytd?(D.balances[priorDec]?priorDec:null):D.periods[D.periods.indexOf(end)-1],delta=previous?B.net_worth-D.balances[previous].net_worth:null;
+    $('networth-cmp').textContent=delta==null?(yoy?'Prior-year comparison unavailable':ytd?`No balance for Dec ${priorDec.slice(0,4)}`:label):`${signed(delta)} from ${yoy?'prior year':ytd?`Dec ${priorDec.slice(0,4)}`:'prior month'}`;
     $('networth-cmp').className='compare '+(delta==null?'':color(delta));
     renderTrend();renderSpending();renderCategories();renderBalance();
   }
@@ -303,8 +306,8 @@ window.HubBudget = (() => {
 
   function renderDrill(items){
     const totalImpact=items.reduce((sum,row)=>sum+row.impact_cad,0);
-    $('tx-summary').textContent=`${periodLabel([drill.start.slice(0,7),drill.end.slice(0,7)])} · ${drill.total} matching row${drill.total===1?'':'s'} · ${money(totalImpact)} on this page`;
-    $('tx-body').innerHTML=items.map(row=>`<tr><td>${row.row_number}</td><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.debit)}</td><td>${escapeHtml(row.credit)}</td><td class="right">${money(row.amount)}</td><td class="right">${signed(row.impact_cad)}</td><td class="tx-note" title="${escapeHtml(row.note)}">${escapeHtml(row.note)||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">No transactions match these filters</td></tr>';
+    $('tx-summary').textContent=`${periodLabel([drill.start.slice(0,7),drill.end.slice(0,7)])} · ${drill.total} matching row${drill.total===1?'':'s'} · ${cents(totalImpact)} on this page`;
+    $('tx-body').innerHTML=items.map(row=>`<tr><td>${row.row_number}</td><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.debit)}</td><td>${escapeHtml(row.credit)}</td><td class="right">${cents(row.amount)}</td><td class="right">${signedCents(row.impact_cad)}</td><td class="tx-note" title="${escapeHtml(row.note)}">${escapeHtml(row.note)||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">No transactions match these filters</td></tr>';
     const first=drill.total?drill.offset+1:0,last=Math.min(drill.offset+TX_PAGE_SIZE,drill.total);
     $('tx-page-summary').textContent=`Showing ${first}–${last} of ${drill.total}`;
     $('tx-prev').disabled=drill.offset===0;
