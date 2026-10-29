@@ -310,11 +310,11 @@ window.HubBudget = (() => {
     }
   }
 
-  function accountOptions(selected){
-    // A hand-typed Excel row may name an account the Ledger doesn't list;
-    // keep it selectable so opening the form doesn't silently change it.
-    const names=txAccounts.includes(selected)||selected==null?txAccounts:[selected,...txAccounts];
-    return names.map(name=>`<option value="${escapeHtml(name)}"${name===selected?' selected':''}>${escapeHtml(name)}</option>`).join('');
+  // Text box + datalist so the suggestions narrow as the user types. The box
+  // starts with the row's own name, even one the Ledger doesn't list (a
+  // hand-typed Excel row), so opening the form doesn't silently change it.
+  function accountInput(cls,value){
+    return `<input type="text" class="${cls}" list="tx-account-list" autocomplete="off" placeholder="Type to search accounts" value="${escapeHtml(value||'')}">`;
   }
 
   function drillRowHtml(row){
@@ -324,8 +324,8 @@ window.HubBudget = (() => {
     const hint=txEdit.is_formula?'<tr><td colspan="8" class="tx-hint">This line sums multiple imported transactions — saving replaces it with a single fixed amount.</td></tr>':'';
     return `<tr class="tx-edit"><td>${row.row_number}</td>
       <td><input type="date" class="tx-edit-date" value="${escapeHtml(txEdit.posting_date||'')}"></td>
-      <td><select class="tx-edit-debit">${accountOptions(txEdit.debit)}</select></td>
-      <td><select class="tx-edit-credit">${accountOptions(txEdit.credit)}</select></td>
+      <td>${accountInput('tx-edit-debit',txEdit.debit)}</td>
+      <td>${accountInput('tx-edit-credit',txEdit.credit)}<datalist id="tx-account-list">${txAccounts.map(name=>`<option value="${escapeHtml(name)}">`).join('')}</datalist></td>
       <td class="right"><input type="number" step="0.01" class="tx-edit-amount" value="${txEdit.amount??''}"></td>
       <td></td>
       <td class="tx-note"><input type="text" class="tx-edit-note" value="${escapeHtml(txEdit.note||'')}"></td>
@@ -386,6 +386,8 @@ window.HubBudget = (() => {
     if(!fields.posting_date){$('tx-error').textContent='Enter a date.';return}
     if(!Number.isFinite(fields.amount)){$('tx-error').textContent='Enter a valid amount.';return}
     const original=txEdit;
+    const unknown=[[fields.debit,original.debit],[fields.credit,original.credit]].find(([value,was])=>value!==was&&!txAccounts.includes(value));
+    if(unknown){$('tx-error').textContent=`"${unknown[0]}" is not an account in the Ledger.`;return}
     txSaving=true;
     $('tx-body').querySelectorAll('.tx-edit button').forEach(button=>{button.disabled=true});
     let error='';
@@ -483,6 +485,9 @@ window.HubBudget = (() => {
       if(event.key!=='Escape'||$('tx-backdrop').hidden)return;
       if(txEdit){if(!txSaving)cancelEdit()}else closeDrill();
     });
+    // Select the current name on focus so typing replaces it; otherwise the
+    // datalist only offers suggestions matching the text already in the box.
+    $('tx-body').addEventListener('focusin',event=>{if(event.target.matches('input[list="tx-account-list"]'))event.target.select()});
     $('tx-body').addEventListener('click',event=>{
       const editButton=event.target.closest('[data-tx-edit]');
       if(editButton){if(!txSaving)startEdit(+editButton.dataset.txEdit);return}
