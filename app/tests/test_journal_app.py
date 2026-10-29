@@ -285,6 +285,65 @@ def test_update_journal_row_outside_any_batch_raises(app):
         )
 
 
+def _append_unposted_row(app):
+    """A row written straight to the Journal (as if typed in Excel), outside
+    every batch this app recorded."""
+    from journal_entry.xlsx_append import JournalLine, append_journal_rows
+
+    append_journal_rows(app.workbook_path, [
+        JournalLine(date(2026, 8, 5), "Food", "Cash", [12.5], "Hand entered"),
+    ])
+    return app.journal_row(3)
+
+
+def test_journal_row_returns_raw_values(app):
+    row = _append_unposted_row(app)
+
+    assert row == {
+        "row_number": 3, "posting_date": "2026-08-05", "debit": "Food",
+        "credit": "Cash", "amount": 12.5, "note": "Hand entered", "is_formula": False,
+    }
+
+
+@pytest.mark.parametrize("row_number", [1, 2, 99])
+def test_journal_row_rejects_header_and_missing_rows(app, row_number):
+    with pytest.raises(ValueError):
+        app.journal_row(row_number)
+
+
+def test_update_journal_row_any_row_edits_an_unposted_row(app):
+    original = _append_unposted_row(app)
+
+    app.update_journal_row(
+        3, posting_date=date(2026, 8, 6), debit="Transit", credit="Cash",
+        amount=15.0, note="Fixed", expected=original, require_posted=False,
+    )
+
+    updated = app.journal_row(3)
+    assert updated["posting_date"] == "2026-08-06"
+    assert updated["debit"] == "Transit"
+    assert updated["amount"] == 15.0
+    assert updated["note"] == "Fixed"
+
+
+def test_update_journal_row_unposted_row_still_refused_by_default(app):
+    original = _append_unposted_row(app)
+
+    with pytest.raises(ValueError, match="not posted by this app"):
+        app.update_journal_row(
+            3, posting_date=date(2026, 8, 6), debit="Food", credit="Cash",
+            amount=15.0, note="Fixed", expected=original,
+        )
+
+
+def test_update_journal_row_any_row_never_touches_header_rows(app):
+    with pytest.raises(ValueError, match="header"):
+        app.update_journal_row(
+            2, posting_date=date(2026, 8, 6), debit="Food", credit="Cash",
+            amount=15.0, note="x", expected={}, require_posted=False,
+        )
+
+
 def test_update_journal_row_zero_amount_writes_zero(app):
     mapping = {"date_col": "Date", "desc_col": "Description", "amount_col": "Amount"}
     app.import_csv(_CSV, account="Rewards Card", mapping=mapping, date_format="%Y-%m-%d")
@@ -322,3 +381,61 @@ def test_update_journal_row_stale_expected_raises_conflict_without_writing(app):
 
     unchanged = app.batch_lines(result["batch_id"])[0]
     assert unchanged["amount"] == original["amount"]
+
+
+def _manual_line(**overrides):
+    line = {
+        "posting_date": date(2026, 8, 5), "debit": "Food", "credit": "Cash",
+        "amount": 12.5, "note": "Farmers market",
+    }
+    line.update(overrides)
+    return line
+
+
+def test_post_manual_writes_lines_with_their_own_dates_and_records_a_batch(app):
+    result = app.post_manual([
+        _manual_line(),
+        _manual_line(posting_date=date(2026, 8, 3), debit="Cash", credit="Salary",
+                     amount=900.0, note="Cash pay"),
+    ])
+
+    assert result["line_count"] == 2
+    assert result["last_row"] == result["first_row"] + 1
+    lines = app.batch_lines(result["batch_id"])
+    assert [(l["posting_date"], l["debit"], l["credit"], l["amount"], l["note"]) for l in lines] == [
+        ("2026-08-05", "Food", "Cash", 12.5, "Farmers market"),
+        ("2026-08-03", "Cash", "Salary", 900.0, "Cash pay"),
+    ]
+    batch = next(b for b in app.batches() if b["batch_id"] == result["batch_id"])
+    assert batch["posting_date"] == "2026-08-03"
+    assert batch["line_count"] == 2
+
+
+@pytest.mark.parametrize("lines", [
+    [],
+    [_manual_line(credit="Food")],
+    [_manual_line(amount=0)],
+    [_manual_line(amount=-5)],
+    [_manual_line(amount="abc")],
+    [_manual_line(note="  ")],
+    [_manual_line(debit="")],
+    [_manual_line(debit="Not An Account")],
+])
+def test_post_manual_rejects_invalid_lines_without_writing(app, lines):
+    before = app.workbook_path.read_bytes()
+    with pytest.raises(ValueError):
+        app.post_manual(lines)
+    assert app.batches() == []
+    assert app.workbook_path.read_bytes() == before
+
+
+def test_post_manual_row_is_editable_as_a_posted_row(app):
+    result = app.post_manual([_manual_line()])
+    original = app.batch_lines(result["batch_id"])[0]
+
+    app.update_journal_row(
+        original["row_number"], posting_date=date(2026, 8, 6), debit="Food",
+        credit="Cash", amount=15.0, note="Corrected", expected=original,
+    )
+
+    assert app.batch_lines(result["batch_id"])[0]["amount"] == 15.0

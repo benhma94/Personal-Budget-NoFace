@@ -23,6 +23,10 @@ window.HubBudget = (() => {
   let categorySort = 'actual', categorySortDirection = 'desc';
   let drill = {title:'Transactions',start:'',end:'',category:'',account:'',kind:'',q:'',offset:0,total:0,request:0};
   let drillSearchTimer = null;
+  // txEdit is the raw Journal row (from /api/journal/row) being edited in the
+  // drawer; the drill rows themselves are normalized and can't serve as the
+  // conflict-check `expected` values.
+  let drillItems = [], txEdit = null, txSaving = false, txAccounts = null;
   let wired = false;
 
   function aggregate(keys){
@@ -266,6 +270,7 @@ window.HubBudget = (() => {
     const range=monthRange(keys);
     if(!range)return;
     drill={...drill,title,start:range.start,end:range.end,category,account,kind,q:'',offset:0,total:0};
+    txEdit=null;
     $('tx-title').textContent=title;
     $('tx-start').value=drill.start;$('tx-end').value=drill.end;$('tx-search').value='';
     $('tx-category').value=category||(kind?`__${kind}`:'');
@@ -277,6 +282,7 @@ window.HubBudget = (() => {
   }
 
   function closeDrill(){
+    txEdit=null;
     $('tx-backdrop').hidden=true;
     document.body.style.overflow='';
   }
@@ -284,7 +290,7 @@ window.HubBudget = (() => {
   async function loadDrill(){
     const sequence=++drill.request;
     $('tx-error').textContent='';
-    $('tx-body').innerHTML='<tr><td colspan="7" class="empty">Loading transactions…</td></tr>';
+    $('tx-body').innerHTML='<tr><td colspan="8" class="empty">Loading transactions…</td></tr>';
     const params=new URLSearchParams({start:drill.start,end:drill.end,limit:String(TX_PAGE_SIZE),offset:String(drill.offset)});
     if(drill.category)params.set('category',drill.category);
     if(drill.account)params.set('account',drill.account);
@@ -300,14 +306,38 @@ window.HubBudget = (() => {
     }catch(error){
       if(sequence!==drill.request)return;
       $('tx-error').textContent=error.message;
-      $('tx-body').innerHTML='<tr><td colspan="7" class="empty">Transactions unavailable</td></tr>';
+      $('tx-body').innerHTML='<tr><td colspan="8" class="empty">Transactions unavailable</td></tr>';
     }
   }
 
+  function accountOptions(selected){
+    // A hand-typed Excel row may name an account the Ledger doesn't list;
+    // keep it selectable so opening the form doesn't silently change it.
+    const names=txAccounts.includes(selected)||selected==null?txAccounts:[selected,...txAccounts];
+    return names.map(name=>`<option value="${escapeHtml(name)}"${name===selected?' selected':''}>${escapeHtml(name)}</option>`).join('');
+  }
+
+  function drillRowHtml(row){
+    if(!txEdit||txEdit.row_number!==row.row_number){
+      return `<tr><td>${row.row_number}</td><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.debit)}</td><td>${escapeHtml(row.credit)}</td><td class="right">${cents(row.amount)}</td><td class="right">${signedCents(row.impact_cad)}</td><td class="tx-note" title="${escapeHtml(row.note)}">${escapeHtml(row.note)||'—'}</td><td><button type="button" class="tx-action" data-tx-edit="${row.row_number}">Edit</button></td></tr>`;
+    }
+    const hint=txEdit.is_formula?'<tr><td colspan="8" class="tx-hint">This line sums multiple imported transactions — saving replaces it with a single fixed amount.</td></tr>':'';
+    return `<tr class="tx-edit"><td>${row.row_number}</td>
+      <td><input type="date" class="tx-edit-date" value="${escapeHtml(txEdit.posting_date||'')}"></td>
+      <td><select class="tx-edit-debit">${accountOptions(txEdit.debit)}</select></td>
+      <td><select class="tx-edit-credit">${accountOptions(txEdit.credit)}</select></td>
+      <td class="right"><input type="number" step="0.01" class="tx-edit-amount" value="${txEdit.amount??''}"></td>
+      <td></td>
+      <td class="tx-note"><input type="text" class="tx-edit-note" value="${escapeHtml(txEdit.note||'')}"></td>
+      <td class="tx-edit-actions"><button type="button" class="tx-action primary" data-tx-save>Save</button><button type="button" class="tx-action" data-tx-cancel>Cancel</button><button type="button" class="tx-action danger" data-tx-delete>Delete</button></td>
+    </tr>${hint}`;
+  }
+
   function renderDrill(items){
+    drillItems=items;
     const totalImpact=items.reduce((sum,row)=>sum+row.impact_cad,0);
     $('tx-summary').textContent=`${periodLabel([drill.start.slice(0,7),drill.end.slice(0,7)])} · ${drill.total} matching row${drill.total===1?'':'s'} · ${cents(totalImpact)} on this page`;
-    $('tx-body').innerHTML=items.map(row=>`<tr><td>${row.row_number}</td><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.debit)}</td><td>${escapeHtml(row.credit)}</td><td class="right">${cents(row.amount)}</td><td class="right">${signedCents(row.impact_cad)}</td><td class="tx-note" title="${escapeHtml(row.note)}">${escapeHtml(row.note)||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">No transactions match these filters</td></tr>';
+    $('tx-body').innerHTML=items.map(drillRowHtml).join('')||'<tr><td colspan="8" class="empty">No transactions match these filters</td></tr>';
     const first=drill.total?drill.offset+1:0,last=Math.min(drill.offset+TX_PAGE_SIZE,drill.total);
     $('tx-page-summary').textContent=`Showing ${first}–${last} of ${drill.total}`;
     $('tx-prev').disabled=drill.offset===0;
@@ -319,6 +349,88 @@ window.HubBudget = (() => {
     $('tx-category').innerHTML=['<option value="">All categories</option>','<option value="__expense">All expenses</option>','<option value="__income">All operating income</option>','<option value="__investment">Investment gain / loss</option>',...categories.map(value=>`<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)].join('');
     const balance=D.balances[D.latest_period],accounts=[...balance.assets,...balance.liabilities].map(row=>row.account).sort();
     $('tx-account').innerHTML=['<option value="">All accounts</option>',...accounts.map(value=>`<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)].join('');
+  }
+
+  async function requestJson(url,options){
+    const response=await fetch(url,options);
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||`Request failed (${response.status})`);
+    return data;
+  }
+
+  async function startEdit(rowNumber){
+    $('tx-error').textContent='';
+    try{
+      const [row,accounts]=await Promise.all([
+        requestJson('/api/journal/row?row='+rowNumber),
+        txAccounts?Promise.resolve(null):requestJson('/api/accounts'),
+      ]);
+      if(accounts)txAccounts=accounts.accounts;
+      txEdit=row;
+      renderDrill(drillItems);
+      const input=$('tx-body').querySelector('.tx-edit-date');
+      if(input)input.focus();
+    }catch(error){$('tx-error').textContent=error.message}
+  }
+
+  function cancelEdit(){
+    txEdit=null;
+    renderDrill(drillItems);
+  }
+
+  // Save and Delete share one write path, mirroring the Journal tab: a row is
+  // never removed (that would shift every later row), so Delete saves amount 0
+  // with the note tagged. Any Journal row may be edited, not only app-posted ones.
+  async function saveEdit(fields){
+    if(txSaving||!txEdit)return;
+    if(!fields.posting_date){$('tx-error').textContent='Enter a date.';return}
+    if(!Number.isFinite(fields.amount)){$('tx-error').textContent='Enter a valid amount.';return}
+    const original=txEdit;
+    txSaving=true;
+    $('tx-body').querySelectorAll('.tx-edit button').forEach(button=>{button.disabled=true});
+    let error='';
+    try{
+      await requestJson('/api/journal/row',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        row_number:original.row_number,...fields,any_row:true,
+        expected:{posting_date:original.posting_date,debit:original.debit,credit:original.credit,amount:original.amount,note:original.note},
+      })});
+    }catch(e){error=e.message}
+    txSaving=false;
+    txEdit=null;
+    await refreshAfterEdit();
+    if(error)$('tx-error').textContent=error;
+  }
+
+  function editFields(){
+    const row=$('tx-body').querySelector('.tx-edit');
+    return {
+      posting_date:row.querySelector('.tx-edit-date').value,
+      debit:row.querySelector('.tx-edit-debit').value,
+      credit:row.querySelector('.tx-edit-credit').value,
+      amount:parseFloat(row.querySelector('.tx-edit-amount').value),
+      note:row.querySelector('.tx-edit-note').value,
+    };
+  }
+
+  // The edit can move totals, months, or categories, so refresh the dashboard
+  // too -- keeping the selected period/mode -- before reloading the drawer.
+  async function refreshAfterEdit(){
+    try{
+      D=await requestJson('/api/budget/payload');
+      if(!D.monthly[period]){period=D.latest_period;$('period').value=period}
+      setPeriodBounds();
+      $('asof').textContent=`Journal through ${D.latest_transaction_date} · ${D.workbook}`;
+      populateDrillFilters();
+      $('tx-category').value=drill.category||(drill.kind?`__${drill.kind}`:'');
+      $('tx-account').value=drill.account;
+      render();
+    }catch(error){$('tx-error').textContent=error.message}
+    await loadDrill();
+  }
+
+  function setPeriodBounds(){
+    const first=D.periods[0],last=D.periods[D.periods.length-1];
+    ['period','custom-start','custom-end'].forEach(id=>{$(id).min=first;$(id).max=last});
   }
 
   function wire(){
@@ -367,7 +479,24 @@ window.HubBudget = (() => {
     });
     $('tx-close').addEventListener('click',closeDrill);
     $('tx-backdrop').addEventListener('click',event=>{if(event.target===$('tx-backdrop'))closeDrill()});
-    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('tx-backdrop').hidden)closeDrill()});
+    document.addEventListener('keydown',event=>{
+      if(event.key!=='Escape'||$('tx-backdrop').hidden)return;
+      if(txEdit){if(!txSaving)cancelEdit()}else closeDrill();
+    });
+    $('tx-body').addEventListener('click',event=>{
+      const editButton=event.target.closest('[data-tx-edit]');
+      if(editButton){if(!txSaving)startEdit(+editButton.dataset.txEdit);return}
+      if(event.target.closest('[data-tx-cancel]')){cancelEdit();return}
+      if(event.target.closest('[data-tx-save]')){saveEdit(editFields());return}
+      if(event.target.closest('[data-tx-delete]')){
+        if(!confirm('Delete this row? It stays in the Journal with amount 0 so later rows keep their positions.'))return;
+        const note=txEdit.note||'';
+        saveEdit({
+          posting_date:txEdit.posting_date,debit:txEdit.debit,credit:txEdit.credit,
+          amount:0,note:note.startsWith('[deleted]')?note:`[deleted] ${note}`.trim(),
+        });
+      }
+    });
     for(const id of ['tx-start','tx-end'])$(id).addEventListener('change',()=>{drill[id==='tx-start'?'start':'end']=$(id).value;drill.offset=0;loadDrill()});
     $('tx-category').addEventListener('change',event=>{
       const value=event.target.value;
@@ -392,14 +521,13 @@ window.HubBudget = (() => {
     if(!res.ok){const err=await res.json().catch(()=>({}));$('asof').textContent='Failed to load budget data: '+(err.error||res.status);return}
     D=await res.json();
     period=D.latest_period;
-    const first=D.periods[0],last=D.periods[D.periods.length-1];
-    ['period','custom-start','custom-end'].forEach(id=>{$(id).min=first;$(id).max=last});
+    setPeriodBounds();
     $('period').value=period;
     $('custom-start').value=period.slice(0,4)+'-01';
     $('custom-end').value=period;
     populateDrillFilters();
     if(!wired){wire();wired=true}
-    $('asof').textContent=`Journal through ${D.latest_transaction_date} · ${D.workbook} is read only`;
+    $('asof').textContent=`Journal through ${D.latest_transaction_date} · ${D.workbook}`;
     $('footer').textContent=`Generated ${new Date(D.generated_at).toLocaleString()} · Values use formulas last cached by Excel`;
     render();
   }

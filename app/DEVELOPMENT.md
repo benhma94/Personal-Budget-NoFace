@@ -350,7 +350,11 @@ Excel; close it there first if it's open.
   never a full Excel load/save — and verifies every appended row reads back
   correctly afterward, restoring the backup automatically if anything looks
   wrong. Charts, tables, comments, and the Debit/Credit dropdowns are
-  untouched.
+  untouched. The **Manual entry** panel at the top of the Post tab is for
+  lines that don't come from a CSV (cash, payroll splits, accruals): each
+  line has its own date, Debit, Credit, amount, and note, and is written
+  immediately through the same backup-and-verify path. It is recorded as a
+  batch, so it appears under Recent batches, where it can be edited or deleted.
 - **Rules** — view, add, and delete the learned merchant → category rules.
 
 An optional `data/merchant_seed_rules.json` can initialize rules in a new

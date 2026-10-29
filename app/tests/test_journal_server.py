@@ -690,8 +690,69 @@ def test_update_journal_row_conflict_returns_409(running_server):
     assert "error" in data
 
 
+def test_budget_drill_edits_an_unposted_journal_row_via_http(running_server):
+    from journal_entry.xlsx_append import JournalLine, append_journal_rows
+
+    base_url, journal_app = running_server
+    append_journal_rows(journal_app.workbook_path, [
+        JournalLine(date(2026, 8, 5), "Food", "Cash", [12.5], "Hand entered"),
+    ])
+    status, original = _request(base_url, "GET", "/api/journal/row?row=3")
+    assert status == 200
+    assert original["note"] == "Hand entered"
+    edit = {
+        "row_number": 3, "posting_date": "2026-08-06", "debit": "Food",
+        "credit": "Cash", "amount": 20.0, "note": "Fixed", "expected": original,
+    }
+
+    status, data = _request(base_url, "POST", "/api/journal/row", edit)
+    assert status == 400  # the Journal tab's posted-batches-only guard
+    assert "not posted" in data["error"]
+
+    status, _ = _request(base_url, "POST", "/api/journal/row", {**edit, "any_row": True})
+    assert status == 200
+    status, updated = _request(base_url, "GET", "/api/journal/row?row=3")
+    assert updated["amount"] == 20.0
+    assert updated["note"] == "Fixed"
+
+
+@pytest.mark.parametrize("query", ["", "?row=", "?row=abc", "?row=2", "?row=99"])
+def test_journal_row_bad_request_returns_400(running_server, query):
+    base_url, _ = running_server
+    status, data = _request(base_url, "GET", "/api/journal/row" + query)
+    assert status == 400
+    assert "error" in data
+
+
 def test_batch_lines_unknown_batch_returns_400(running_server):
     base_url, _ = running_server
     status, data = _request(base_url, "GET", "/api/batches/nope/lines")
+    assert status == 400
+    assert "error" in data
+
+
+def test_manual_journal_entry_via_http(running_server):
+    base_url, _ = running_server
+    status, result = _request(base_url, "POST", "/api/journal/manual", {"lines": [
+        {"posting_date": "2026-08-05", "debit": "Food", "credit": "Cash",
+         "amount": 12.5, "note": "Farmers market"},
+    ]})
+    assert status == 200
+    assert result["line_count"] == 1
+
+    status, batches = _request(base_url, "GET", "/api/batches")
+    assert [b["batch_id"] for b in batches] == [result["batch_id"]]
+
+
+@pytest.mark.parametrize("body", [
+    {},
+    {"lines": "nope"},
+    {"lines": [{"posting_date": "2026-08-05", "debit": "Food", "credit": "Food",
+                "amount": 12.5, "note": "x"}]},
+    {"lines": [{"debit": "Food", "credit": "Cash", "amount": 12.5, "note": "x"}]},
+])
+def test_manual_journal_entry_rejects_bad_payloads(running_server, body):
+    base_url, _ = running_server
+    status, data = _request(base_url, "POST", "/api/journal/manual", body)
     assert status == 400
     assert "error" in data

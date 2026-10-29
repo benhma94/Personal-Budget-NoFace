@@ -227,12 +227,31 @@ def make_handler(
                 plan_cache.invalidate()
             return result
 
+        def _post_manual(self, body: dict) -> dict:
+            if not isinstance(body.get("lines"), list) or not all(
+                isinstance(line, dict) for line in body["lines"]
+            ):
+                raise ValueError("lines must be a list of objects")
+            lines = [
+                {**line, "posting_date": _parse_date(line.get("posting_date"))}
+                for line in body["lines"]
+            ]
+            with _WORKBOOK_WRITE_LOCK:
+                result = journal_app.post_manual(lines)
+                budget_cache.invalidate()  # the Journal sheet just changed
+                plan_cache.invalidate()
+            return result
+
         def _update_journal_row(self, body: dict) -> dict:
             with _WORKBOOK_WRITE_LOCK:
                 result = journal_app.update_journal_row(
                     body["row_number"], posting_date=_parse_date(body["posting_date"]),
                     debit=body["debit"], credit=body["credit"], amount=body["amount"],
                     note=body.get("note", ""), expected=body["expected"],
+                    # The Budget drill-down edits any Journal row, including
+                    # ones typed directly in Excel; the Journal tab keeps the
+                    # posted-batches-only guard.
+                    require_posted=not body.get("any_row", False),
                 )
                 budget_cache.invalidate()  # the Journal sheet just changed
                 plan_cache.invalidate()
@@ -267,6 +286,8 @@ def make_handler(
                 self._handle(portfolio_job.status)
             elif path == "/api/retirement/defaults":
                 self._handle(self._retirement_defaults)
+            elif path == "/api/journal/row":
+                self._handle(lambda: journal_app.journal_row(int(query.get("row", [""])[0])))
             elif path == "/api/accounts":
                 self._handle(journal_app.accounts)
             elif path == "/api/transactions":
@@ -353,6 +374,8 @@ def make_handler(
                 self._handle(lambda: self._post(body))
             elif path == "/api/journal/row":
                 self._handle(lambda: self._update_journal_row(body))
+            elif path == "/api/journal/manual":
+                self._handle(lambda: self._post_manual(body))
             else:
                 self._send_json({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
