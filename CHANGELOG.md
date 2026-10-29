@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.6 — 2026-10-29
+
+Version 0.1.5 → 0.1.6.
+
+- feat: Implement type-to-filter account pickers in Journal and Budget tabs
+
+Drafted from commit messages by the publish workflow.
+
 ## 0.1.5 — 2026-10-29
 
 Version 0.1.4 → 0.1.5.

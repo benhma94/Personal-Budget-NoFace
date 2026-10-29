@@ -115,21 +115,16 @@ async function loadBatches(){
   State.batches=await api('GET','/api/batches');
 }
 
-function categoryOptions(selected){
-  const groups={income:[],expense:[],asset:[],liability:[],other:[]};
-  for(const name of State.accounts){(groups[State.kinds[name]]||groups.other).push(name)}
-  const label={income:'Income',expense:'Expense',asset:'Asset / transfer',liability:'Liability / transfer',other:'Other'};
-  let html='<option value="">— choose —</option>';
-  for(const key of ['expense','income','liability','asset','other']){
-    if(!groups[key].length)continue;
-    html+=`<option disabled>— ${label[key]} —</option>`;
-    for(const name of groups[key]){html+=`<option value="${esc(name)}" ${name===selected?'selected':''}>${esc(name)}</option>`}
-  }
-  return html;
+// Account pickers are text boxes tied to one shared <datalist> (appended to
+// every view by render()), so the suggestion list narrows as the user types.
+// A typed name isn't guaranteed to be an account; callers check isAccount().
+function accountInput(attrs,value){
+  return `<input type="text" ${attrs} list="jn-account-list" autocomplete="off" placeholder="Type to search accounts" value="${esc(value)}">`;
 }
-function accountOptions(selected){
-  return State.accounts.map(a=>`<option value="${esc(a)}" ${a===selected?'selected':''}>${esc(a)}</option>`).join('');
+function accountDatalist(){
+  return `<datalist id="jn-account-list">${State.accounts.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>`;
 }
+const isAccount=name=>State.accounts.includes(name);
 
 // ---------------------------------------------------------------- Import --
 function renderImport(){
@@ -360,7 +355,7 @@ function renderReviewFilters(){
         <input type="search" id="rv-search" placeholder="Search description or note" value="${esc(State.reviewFilter.q)}">
       </div>
       <div class="row">
-        <select id="rv-bulk-category">${categoryOptions()}</select>
+        ${accountInput('id="rv-bulk-category"','')}
         <input type="text" id="rv-bulk-note" placeholder="Note" style="width:160px">
         <button class="primary" id="rv-apply">Apply to selected</button>
         <button class="ghost" id="rv-ignore">Ignore selected</button>
@@ -392,7 +387,7 @@ function rowHtml(t){
     <td>${esc(t.account)}</td>
     <td class="wrap">${esc(t.description)}</td>
     <td class="right ${t.amount<0?'bad':'good'}">${money(t.amount)}</td>
-    <td><select class="rv-category">${categoryOptions(t.category)}</select></td>
+    <td>${accountInput('class="rv-category"',t.category)}</td>
     <td><input type="text" class="rv-note" value="${esc(t.note||'')}"></td>
     <td>${badge}${suggested?' <button class="ghost rv-confirm">Confirm</button>':''}</td>
   </tr>`;
@@ -424,6 +419,7 @@ function wireReviewFilters(){
   if(applyBtn)applyBtn.addEventListener('click',async()=>{
     const category=$('#rv-bulk-category').value, note=$('#rv-bulk-note').value;
     if(!category){toast('Choose a category first',false);return}
+    if(!isAccount(category)){toast('Pick a category from the list',false);return}
     if(!State.reviewSelection.size){toast('Select at least one row',false);return}
     await categorizeRows(Array.from(State.reviewSelection),category,note);
     State.reviewSelection.clear();
@@ -468,6 +464,11 @@ function wireReviewTable(){
     const tr=e.target.closest('tr'), fp=tr.dataset.fp;
     const category=$('.rv-category',tr).value, note=$('.rv-note',tr).value;
     if(!category)return;
+    if(!isAccount(category)){
+      toast('Pick a category from the list',false);
+      $('.rv-category',tr).value=State.transactions.find(x=>x.fingerprint===fp).category||'';
+      return;
+    }
     await categorizeRows([fp],category,note);
   }));
 }
@@ -666,15 +667,14 @@ function wireClose(){
 // Hand-typed lines are written straight to the workbook (each on its own
 // date) and recorded as a batch, so they can be corrected under Recent batches.
 function renderManual(){
-  const blank='<option value="">— choose —</option>';
   return `
   <div class="panel">
     <h2>Manual entry</h2>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Debit</th><th>Credit</th><th class="right">Amount</th><th>Note</th><th></th></tr></thead><tbody>
       ${State.manualLines.map((l,i)=>`<tr data-i="${i}">
         <td><input type="date" class="mn-field" data-key="posting_date" value="${esc(l.posting_date)}"></td>
-        <td><select class="mn-field" data-key="debit">${blank}${accountOptions(l.debit)}</select></td>
-        <td><select class="mn-field" data-key="credit">${blank}${accountOptions(l.credit)}</select></td>
+        <td>${accountInput('class="mn-field" data-key="debit"',l.debit)}</td>
+        <td>${accountInput('class="mn-field" data-key="credit"',l.credit)}</td>
         <td class="right"><input type="number" step="0.01" min="0" class="mn-field" data-key="amount" value="${esc(l.amount)}" style="width:100px"></td>
         <td><input type="text" class="mn-field" data-key="note" value="${esc(l.note)}" placeholder="Note"></td>
         <td><button class="ghost mn-remove" title="Remove line" ${State.manualLines.length>1?'':'disabled'}>×</button></td>
@@ -706,6 +706,8 @@ function wireManual(){
       const n=i+1;
       if(!l.posting_date){toast(`Line ${n}: pick a date`,false);return}
       if(!l.debit||!l.credit){toast(`Line ${n}: choose both a debit and a credit account`,false);return}
+      const unknown=[l.debit,l.credit].find(a=>!isAccount(a));
+      if(unknown){toast(`Line ${n}: "${unknown}" is not an account in the Ledger`,false);return}
       if(l.debit===l.credit){toast(`Line ${n}: debit and credit must be different accounts`,false);return}
       if(!Number.isFinite(l.amount)||l.amount<=0){toast(`Line ${n}: amount must be greater than zero`,false);return}
       if(!l.note){toast(`Line ${n}: a note is required`,false);return}
@@ -775,8 +777,8 @@ function lineHtml(l){
   const hint=l.is_formula?`<tr><td colspan="6" class="hint">This line sums multiple imported transactions — saving replaces it with a single fixed amount.</td></tr>`:'';
   return `<tr data-row="${l.row_number}">
     <td><input type="date" class="ln-date" value="${esc(l.posting_date)}"></td>
-    <td><select class="ln-debit">${accountOptions(l.debit)}</select></td>
-    <td><select class="ln-credit">${accountOptions(l.credit)}</select></td>
+    <td>${accountInput('class="ln-debit"',l.debit)}</td>
+    <td>${accountInput('class="ln-credit"',l.credit)}</td>
     <td class="right"><input type="number" step="0.01" class="ln-amount" value="${l.amount}" style="width:100px"></td>
     <td><input type="text" class="ln-note" value="${esc(l.note)}"></td>
     <td class="row"><button class="primary ln-save" data-row="${l.row_number}">Save</button><button class="ghost ln-cancel">Cancel</button><button class="danger ln-delete" data-row="${l.row_number}">Delete</button></td>
@@ -850,10 +852,16 @@ async function wirePost(){
   };
   $$('.ln-save').forEach(btn=>btn.addEventListener('click',()=>{
     const tr=btn.closest('tr');
+    const debit=$('.ln-debit',tr).value, credit=$('.ln-credit',tr).value;
+    // A hand-typed Excel row may name an account the Ledger doesn't list;
+    // leaving it unchanged mustn't block saving the other fields.
+    const original=State.batchLines.find(l=>l.row_number===+btn.dataset.row);
+    const unknown=[[debit,original.debit],[credit,original.credit]].find(([v,o])=>v!==o&&!isAccount(v));
+    if(unknown){toast(`"${unknown[0]}" is not an account in the Ledger`,false);return}
     saveLine(+btn.dataset.row,{
       posting_date:$('.ln-date',tr).value,
-      debit:$('.ln-debit',tr).value,
-      credit:$('.ln-credit',tr).value,
+      debit,
+      credit,
       amount:parseFloat($('.ln-amount',tr).value),
       note:$('.ln-note',tr).value,
     },'Row updated');
@@ -878,7 +886,7 @@ function renderRules(){
     <div class="row">
       <input type="text" id="ru-pattern" placeholder="Pattern, e.g. EXAMPLE MARKET">
       <select id="ru-match"><option value="contains">Contains</option><option value="regex">Regex</option></select>
-      <select id="ru-category">${categoryOptions()}</select>
+      ${accountInput('id="ru-category"','')}
       <input type="text" id="ru-note" placeholder="Note">
       <button class="primary" id="ru-add">Add rule</button>
     </div>
@@ -897,6 +905,7 @@ function wireRules(){
     const pattern=$('#ru-pattern').value.trim(), category=$('#ru-category').value, note=$('#ru-note').value;
     const match_type=$('#ru-match').value;
     if(!pattern||!category){toast('Pattern and category are required',false);return}
+    if(!isAccount(category)){toast('Pick a category from the list',false);return}
     try{
       await api('POST','/api/rules',{pattern,category,note,match_type});
       await loadRules(); render();
@@ -919,6 +928,7 @@ async function render(){
   else if(State.tab==='close'){view.innerHTML=renderClose();wireClose()}
   else if(State.tab==='post'){view.innerHTML=renderPost();await wirePost()}
   else if(State.tab==='rules'){view.innerHTML=renderRules();wireRules()}
+  view.insertAdjacentHTML('beforeend',accountDatalist());
   restoreViewPosition(pos);
   lastRenderedTab=State.tab;
 }
@@ -937,6 +947,9 @@ async function setTab(tab){
 }
 
 $$('#tabs button').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+// Select the current name on focus so typing replaces it; otherwise the
+// datalist only offers suggestions matching the text already in the box.
+$('#view').addEventListener('focusin',e=>{if(e.target.matches('input[list="jn-account-list"]'))e.target.select()});
 
 (async()=>{
   try{
