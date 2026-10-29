@@ -169,14 +169,18 @@ def test_spending_donut_uses_every_positive_category_with_stable_colours():
     assert "overflow-y: auto" in css
 
 
-def test_budget_transaction_drawer_is_read_only_and_period_aware():
+def test_budget_transaction_drawer_is_period_aware_and_edits_journal_rows():
     js = _read("budget.js")
     shell = _read("shell.html")
 
     assert "/api/budget/transactions" in js
     assert "TX_PAGE_SIZE = 100" in js
     assert "comparisonKeys" in js
-    assert "method:'POST'" not in js
+    # Edits fetch the raw row for the conflict check, then save any Journal row.
+    assert "/api/journal/row?row=" in js
+    assert "any_row:true" in js
+    assert "expected:{" in js
+    assert "[deleted]" in js
     for element_id in (
         "tx-backdrop", "tx-start", "tx-end", "tx-category", "tx-account",
         "tx-search", "tx-body", "tx-prev", "tx-next",

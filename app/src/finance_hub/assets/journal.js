@@ -94,7 +94,12 @@ const State={
   pendingMapping:null, importLog:[], postingDate:new Date().toISOString().slice(0,10), preview:null,
   closeMonth:currentMonth(), closeData:null, closeInputs:null, closeDirty:false,
   batches:[], expandedBatch:null, batchLines:null, editingRow:null,
+  manualLines:[blankManualLine()],
 };
+
+function blankManualLine(){
+  return {posting_date:new Date().toISOString().slice(0,10), debit:'', credit:'', amount:'', note:''};
+}
 
 async function loadAccounts(){
   const data=await api('GET','/api/accounts');
@@ -658,9 +663,67 @@ function wireClose(){
 }
 
 // ------------------------------------------------------------------ Post --
+// Hand-typed lines are written straight to the workbook (each on its own
+// date) and recorded as a batch, so they can be corrected under Recent batches.
+function renderManual(){
+  const blank='<option value="">— choose —</option>';
+  return `
+  <div class="panel">
+    <h2>Manual entry</h2>
+    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Debit</th><th>Credit</th><th class="right">Amount</th><th>Note</th><th></th></tr></thead><tbody>
+      ${State.manualLines.map((l,i)=>`<tr data-i="${i}">
+        <td><input type="date" class="mn-field" data-key="posting_date" value="${esc(l.posting_date)}"></td>
+        <td><select class="mn-field" data-key="debit">${blank}${accountOptions(l.debit)}</select></td>
+        <td><select class="mn-field" data-key="credit">${blank}${accountOptions(l.credit)}</select></td>
+        <td class="right"><input type="number" step="0.01" min="0" class="mn-field" data-key="amount" value="${esc(l.amount)}" style="width:100px"></td>
+        <td><input type="text" class="mn-field" data-key="note" value="${esc(l.note)}" placeholder="Note"></td>
+        <td><button class="ghost mn-remove" title="Remove line" ${State.manualLines.length>1?'':'disabled'}>×</button></td>
+      </tr>`).join('')}
+    </tbody></table></div>
+    <div class="row" style="margin-top:10px">
+      <button class="ghost" id="mn-add">+ Add line</button>
+      <button class="primary" id="mn-write">Write to workbook</button>
+    </div>
+  </div>`;
+}
+
+function wireManual(){
+  $$('.mn-field').forEach(el=>{
+    const sync=()=>{State.manualLines[+el.closest('tr').dataset.i][el.dataset.key]=el.value};
+    el.addEventListener('input',sync); el.addEventListener('change',sync);
+  });
+  $$('.mn-remove').forEach(btn=>btn.addEventListener('click',()=>{
+    State.manualLines.splice(+btn.closest('tr').dataset.i,1); render();
+  }));
+  $('#mn-add').addEventListener('click',()=>{
+    const last=State.manualLines[State.manualLines.length-1];
+    State.manualLines.push({...blankManualLine(),posting_date:last?last.posting_date:blankManualLine().posting_date});
+    render();
+  });
+  $('#mn-write').addEventListener('click',async()=>{
+    const lines=State.manualLines.map(l=>({...l,amount:parseFloat(l.amount),note:l.note.trim()}));
+    for(const [i,l] of lines.entries()){
+      const n=i+1;
+      if(!l.posting_date){toast(`Line ${n}: pick a date`,false);return}
+      if(!l.debit||!l.credit){toast(`Line ${n}: choose both a debit and a credit account`,false);return}
+      if(l.debit===l.credit){toast(`Line ${n}: debit and credit must be different accounts`,false);return}
+      if(!Number.isFinite(l.amount)||l.amount<=0){toast(`Line ${n}: amount must be greater than zero`,false);return}
+      if(!l.note){toast(`Line ${n}: a note is required`,false);return}
+    }
+    if(!confirm(`Write ${lines.length} line(s) to Personal Budget.xlsx now?`))return;
+    try{
+      const result=await api('POST','/api/journal/manual',{lines});
+      toast(`Wrote ${result.line_count} line(s): rows ${result.first_row}–${result.last_row}`,true);
+      State.manualLines=[blankManualLine()];
+      await loadBatches();
+      render();
+    }catch(e){toast(e.message,false)}
+  });
+}
+
 function renderPost(){
   const p=State.preview;
-  return `
+  return renderManual()+`
   <div class="panel">
     <h2>Post to the Journal</h2>
     <div class="row">
@@ -721,6 +784,7 @@ function lineHtml(l){
 }
 
 async function wirePost(){
+  wireManual();
   $('#post-date').addEventListener('change',e=>{State.postingDate=e.target.value});
   $('#post-preview-btn').addEventListener('click',async()=>{
     try{

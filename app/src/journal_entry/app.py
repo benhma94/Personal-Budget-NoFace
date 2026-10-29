@@ -7,6 +7,7 @@ server.
 """
 from __future__ import annotations
 
+import math
 import uuid
 from dataclasses import asdict
 from datetime import date, datetime
@@ -24,6 +25,9 @@ from .month_close import stage_adjustments
 from .store import Store
 from .xlsx_append import JournalLine, append_journal_rows
 from .xlsx_append import update_journal_row as _write_updated_row
+
+# Journal rows 1-2 are headers; data starts at row 3 (as budget_dashboard reads it).
+_FIRST_JOURNAL_ROW = 3
 
 
 class RowConflictError(RuntimeError):
@@ -365,6 +369,49 @@ class JournalApp:
             "skipped": skipped,
         }
 
+    def post_manual(self, lines: list[dict[str, Any]]) -> dict[str, Any]:
+        """Write hand-typed Journal lines straight to the workbook, each on
+        its own date, bypassing the import queue. Recorded as a batch so the
+        rows show under Recent batches and stay editable there."""
+        if not lines:
+            raise ValueError("add at least one line")
+        journal_lines = []
+        for number, raw in enumerate(lines, start=1):
+            debit = str(raw["debit"] or "").strip()
+            credit = str(raw["credit"] or "").strip()
+            note = str(raw.get("note") or "").strip()
+            try:
+                amount = float(raw["amount"])
+            except (TypeError, ValueError):
+                raise ValueError(f"line {number}: amount must be a number") from None
+            if not debit or not credit:
+                raise ValueError(f"line {number}: choose both a debit and a credit account")
+            if debit == credit:
+                raise ValueError(f"line {number}: debit and credit must be different accounts")
+            if not math.isfinite(amount) or amount <= 0:
+                raise ValueError(f"line {number}: amount must be greater than zero")
+            # A blank note reads back as None, which would fail verification.
+            if not note:
+                raise ValueError(f"line {number}: a note is required")
+            journal_lines.append(JournalLine(raw["posting_date"], debit, credit, [amount], note))
+
+        result = append_journal_rows(self.workbook_path, journal_lines)
+
+        batch_id = uuid.uuid4().hex[:12]
+        now = datetime.now().isoformat(timespec="seconds")
+        posting_date = min(line.posting_date for line in journal_lines)
+        self.store.record_batch(
+            batch_id, posting_date.isoformat(), now, result.first_row, result.last_row,
+            str(result.backup_path), len(journal_lines),
+        )
+        return {
+            "batch_id": batch_id,
+            "first_row": result.first_row,
+            "last_row": result.last_row,
+            "backup_path": str(result.backup_path),
+            "line_count": len(journal_lines),
+        }
+
     def batches(self) -> list[dict[str, Any]]:
         return self.store.list_batches()
 
@@ -375,19 +422,33 @@ class JournalApp:
             raise ValueError(f"unknown batch: {batch_id}")
         return xlsx_read.read_journal_rows(self.workbook_path, batch["first_row"], batch["last_row"])
 
+    def journal_row(self, row_number: int) -> dict[str, Any]:
+        """Raw current contents of one Journal data row, for an edit form's
+        `expected` values (the Budget payload's rows are normalized)."""
+        if row_number < _FIRST_JOURNAL_ROW:
+            raise ValueError(f"row {row_number} is a Journal header row")
+        rows = xlsx_read.read_journal_rows(self.workbook_path, row_number, row_number)
+        if not rows:
+            raise ValueError(f"row {row_number} not found in the Journal sheet")
+        return rows[0]
+
     def update_journal_row(
         self, row_number: int, *, posting_date: date, debit: str, credit: str,
         amount: float, note: str, expected: dict[str, Any],
+        require_posted: bool = True,
     ) -> dict[str, Any]:
-        """Correct one already-posted Journal row in place. Refuses rows
-        this app never posted (row_number outside every recorded batch's
-        range) and refuses if the row's current values don't match
+        """Correct one Journal row in place. By default refuses rows this
+        app never posted (row_number outside every recorded batch's range);
+        `require_posted=False` allows any data row, e.g. one typed directly
+        in Excel. Refuses if the row's current values don't match
         `expected` -- e.g. it was hand-edited in Excel since the edit form
         was opened. A zero amount is allowed: it is how a posted row is
         "deleted" without removing it, which would shift every later row
         and break the recorded batch ranges.
         """
-        if not any(
+        if row_number < _FIRST_JOURNAL_ROW:
+            raise ValueError(f"row {row_number} is a Journal header row")
+        if require_posted and not any(
             batch["first_row"] <= row_number <= batch["last_row"]
             for batch in self.store.list_batches()
         ):

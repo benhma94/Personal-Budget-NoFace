@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.5 — 2026-10-29
+
+Version 0.1.4 → 0.1.5.
+
+- feat: Implement manual journal entry feature with validation and batch recording
+- chore: Update .gitignore to remove specific Calcifer backup entries
+- chore: Remove project configuration file as part of cleanup
+- feat: Enhance budget transaction editing with support for unposted journal rows and improved UI elements
+
+Drafted from commit messages by the publish workflow.
+
 ## 0.1.4 — 2026-10-19
 
 Version 0.1.3 → 0.1.4.
