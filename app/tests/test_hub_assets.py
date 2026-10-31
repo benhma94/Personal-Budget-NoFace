@@ -217,6 +217,13 @@ def test_portfolio_js_wires_refresh_and_status_polling():
     assert "/api/portfolio/status" in js
 
 
+def test_journal_import_has_a_separate_portfolio_upload_box():
+    js = _read("journal.js")
+    assert 'id="pi-dropzone"' in js
+    assert "/api/portfolio/import/preview" in js
+    assert "'/api/portfolio/import'" in js
+
+
 def test_portfolio_uses_the_renamed_window_error_id():
     assert 'id="pf-window-error"' in _read("shell.html")
     assert "pf-window-error" in _read("portfolio.js")

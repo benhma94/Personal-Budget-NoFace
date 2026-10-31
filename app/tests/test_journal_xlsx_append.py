@@ -434,11 +434,11 @@ def test_round_trip_against_real_workbook_preserves_fragile_parts(tmp_path):
             n for n in before_names & after_names if before_bytes[n] != after.read(n)
         }
 
-    assert before_names - after_names == {"xl/calcChain.xml"}
-    assert changed == {
-        "xl/worksheets/sheet1.xml",
-        "xl/sharedStrings.xml",
-        "xl/workbook.xml",
-        "[Content_Types].xml",
-        "xl/_rels/workbook.xml.rels",
-    }
+    # The calc chain only exists if Excel saved the workbook since this app
+    # last wrote to it; every app write removes it and sets fullCalcOnLoad,
+    # so on an already-invalidated workbook those parts stay byte-identical.
+    had_calc_chain = "xl/calcChain.xml" in before_names
+    calc_parts = {"xl/workbook.xml", "[Content_Types].xml", "xl/_rels/workbook.xml.rels"}
+    assert before_names - after_names == ({"xl/calcChain.xml"} if had_calc_chain else set())
+    assert changed - calc_parts == {"xl/worksheets/sheet1.xml", "xl/sharedStrings.xml"}
+    assert changed & calc_parts == (calc_parts if had_calc_chain else set())

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.7 — 2026-10-31
+
+Version 0.1.6 → 0.1.7.
+
+- feat: Add portfolio transactions upload feature to Journal tab with preview and save functionality
+
+Drafted from commit messages by the publish workflow.
+
 ## 0.1.6 — 2026-10-29
 
 Version 0.1.5 → 0.1.6.
