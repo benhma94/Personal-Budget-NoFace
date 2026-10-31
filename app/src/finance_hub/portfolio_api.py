@@ -1,4 +1,5 @@
-"""Background portfolio-pipeline refresh and payload cache access.
+"""Background portfolio-pipeline refresh, payload cache access, and the
+Journal tab's portfolio-transactions CSV upload.
 
 The portfolio pipeline (portfolio_tracker.cli.main) is slow and needs LSEG
 Workspace running, so the hub never runs it automatically. Instead it reads
@@ -10,10 +11,12 @@ console output as a status log the Portfolio tab can poll and display.
 from __future__ import annotations
 
 import contextlib
+import csv
 import io
 import json
+import os
 import threading
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +31,10 @@ class PortfolioRefreshJob:
         self._state = "idle"  # idle | running | error
         self._log: list[str] = []
         self._error: str | None = None
+
+    @property
+    def workbook_path(self) -> Path:
+        return self._workbook_path
 
     def status(self) -> dict[str, Any]:
         with self._lock:
@@ -74,6 +81,62 @@ class PortfolioRefreshJob:
                 self._log = buffer.getvalue().splitlines()
                 self._state = "error"
                 self._error = str(exc)
+
+
+def detect_portfolio_format(headers: list[str]) -> str | None:
+    """Name the broker export these CSV headers belong to, or None.
+
+    Wealthsimple is the only format the pipeline reads today. The date
+    columns mirror the three generations read_wealthsimple_csv accepts
+    (portfolio_tracker/io_csv.py).
+    """
+    names = {h.strip() for h in headers}
+    if {"activity_type", "net_cash_amount"} <= names and names & {
+        "transaction_date", "effective_at", "effective_date",
+    }:
+        return "wealthsimple"
+    return None
+
+
+def preview_portfolio_import(text: str) -> dict[str, Any]:
+    """Parse an uploaded portfolio CSV and summarise what the pipeline will see."""
+    headers = next(csv.reader(io.StringIO(text)), [])
+    fmt = detect_portfolio_format(headers)
+    if fmt is None:
+        raise ValueError(
+            "Unrecognised portfolio file — only Wealthsimple activities exports are supported"
+        )
+    from portfolio_tracker.io_csv import read_wealthsimple_csv  # deferred: heavy import
+
+    df, warnings = read_wealthsimple_csv(io.StringIO(text))
+    dates = df["date"]
+    return {
+        "format": fmt,
+        "rows": len(df),
+        "first_date": dates.min().date().isoformat() if len(df) else None,
+        "last_date": dates.max().date().isoformat() if len(df) else None,
+        "by_type": {str(k): int(v) for k, v in df["type"].value_counts().sort_index().items()},
+        "skipped": len(warnings),
+        "warnings": warnings[:20],
+    }
+
+
+def save_portfolio_import(text: str, data_dir: str | Path, today: date | None = None) -> dict[str, Any]:
+    """Validate the upload and save it where the pipeline auto-detects it.
+
+    portfolio_tracker.cli._load_transactions reads the newest
+    activities-export-*.csv by filename next to the workbook, so naming the
+    file by today's date makes this upload the one the next Refresh uses.
+    A same-day upload replaces the earlier one.
+    """
+    summary = preview_portfolio_import(text)
+    data_dir = Path(data_dir)
+    target = data_dir / f"activities-export-{(today or date.today()).isoformat()}.csv"
+    tmp = target.with_suffix(".csv.tmp")
+    with tmp.open("w", encoding="utf-8", newline="") as fh:
+        fh.write(text)
+    os.replace(tmp, target)
+    return {**summary, "saved_as": target.name}
 
 
 def read_cache(payload_path: str | Path) -> dict[str, Any] | None:

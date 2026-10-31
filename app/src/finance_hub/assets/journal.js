@@ -136,26 +136,37 @@ function renderImport(){
     <div id="mapping-area"></div>
   </div>
   <div class="panel">
+    <h2>Portfolio transactions</h2>
+    <div class="dropzone" id="pi-dropzone">Drop a Wealthsimple activities export here, or click to choose a file</div>
+    <input type="file" id="pi-file-input" accept=".csv,text/csv" style="display:none">
+    <div class="hint">Saved for the Portfolio tab — not added to the journal. Press Refresh on the Portfolio tab afterwards.</div>
+    <div id="pi-area"></div>
+  </div>
+  <div class="panel">
     <h2>This session</h2>
     <div class="import-log" id="import-log">${State.importLog.length?'':'<div class="empty">Nothing imported yet.</div>'}
       ${State.importLog.map((item,i)=>`<div class="item">
         <div>${esc(item.summary)}</div>
         <div class="row" style="margin-top:6px">
           ${item.fingerprints.length?`<button class="ghost il-undo" data-i="${i}">Undo (delete ${item.fingerprints.length} new row${item.fingerprints.length===1?'':'s'})</button>`:''}
-          <button class="ghost il-edit" data-i="${i}">Edit layout</button>
+          ${item.portfolio?'':`<button class="ghost il-edit" data-i="${i}">Edit layout</button>`}
         </div>
       </div>`).join('')}
     </div>
   </div>`;
 }
 
-function wireImport(){
-  const dz=$('#dropzone'), input=$('#file-input');
+function wireDropzone(dz,input,onFile){
   dz.addEventListener('click',()=>input.click());
   ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('drag')}));
   ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('drag')}));
-  dz.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)handleFile(f)});
-  input.addEventListener('change',()=>{const f=input.files[0];if(f)handleFile(f);input.value=''});
+  dz.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)onFile(f)});
+  input.addEventListener('change',()=>{const f=input.files[0];if(f)onFile(f);input.value=''});
+}
+
+function wireImport(){
+  wireDropzone($('#dropzone'),$('#file-input'),handleFile);
+  wireDropzone($('#pi-dropzone'),$('#pi-file-input'),handlePortfolioFile);
   $$('.il-undo').forEach(btn=>btn.addEventListener('click',()=>undoImport(+btn.dataset.i)));
   $$('.il-edit').forEach(btn=>btn.addEventListener('click',()=>editLayout(+btn.dataset.i)));
 }
@@ -313,6 +324,38 @@ async function editLayout(i){
     const sniff=await api('POST','/api/import/sniff',{text:item.text});
     showMappingForm(item.filename,item.text,sniff,sniff.known_source);
   }catch(e){toast(e.message,false)}
+}
+
+// Portfolio exports skip the journal entirely: the server saves the file
+// where the portfolio pipeline auto-detects it (finance_hub/portfolio_api.py).
+async function handlePortfolioFile(file){
+  const text=await file.text();
+  let s;
+  try{s=await api('POST','/api/portfolio/import/preview',{text})}
+  catch(e){toast(e.message,false);return}
+  const types=Object.entries(s.by_type).map(([t,n])=>`${esc(t)} ${n}`).join(' · ')||'none';
+  $('#pi-area').innerHTML=`
+    <div class="panel" style="margin-top:14px;background:var(--panel2)">
+      <h2>Wealthsimple activities export — ${esc(file.name)}</h2>
+      <div>${s.rows} activities${s.rows?` from ${esc(s.first_date)} to ${esc(s.last_date)}`:''}</div>
+      <div class="hint">${types}</div>
+      ${s.skipped?`<div class="hint">${s.skipped} row${s.skipped===1?'':'s'} skipped:</div>
+        <ul class="hint">${s.warnings.map(w=>`<li>${esc(w)}</li>`).join('')}${s.skipped>s.warnings.length?'<li>…</li>':''}</ul>`:''}
+      <div class="row"><button class="primary" id="pi-save">Save to Portfolio</button>
+        <button class="ghost" id="pi-cancel">Cancel</button></div>
+    </div>`;
+  $('#pi-cancel').addEventListener('click',()=>{$('#pi-area').innerHTML=''});
+  $('#pi-save').addEventListener('click',async()=>{
+    try{
+      const result=await api('POST','/api/portfolio/import',{text});
+      State.importLog.unshift({
+        summary:`Portfolio: saved ${result.rows} activities as ${result.saved_as} — press Refresh on the Portfolio tab`,
+        fingerprints:[], filename:file.name, portfolio:true,
+      });
+      toast(`Saved ${result.saved_as}`,true);
+      render();
+    }catch(e){toast(e.message,false)}
+  });
 }
 
 // ---------------------------------------------------------------- Review --

@@ -25,7 +25,13 @@ from journal_entry.xlsx_append import UnknownAccountError, VerificationError, Wo
 from .budget_api import BudgetPayloadCache
 from .budget_plan_api import BudgetPlanSourceCache, read_budget_plan, write_budget_plan
 from .idle_monitor import IdleMonitor, start_idle_watcher
-from .portfolio_api import PortfolioRefreshJob, read_cache, stale_days
+from .portfolio_api import (
+    PortfolioRefreshJob,
+    preview_portfolio_import,
+    read_cache,
+    save_portfolio_import,
+    stale_days,
+)
 from .retirement import build_retirement_defaults, forecast_retirement
 
 _ASSET_DIR = Path(__file__).parent / "assets"
@@ -325,6 +331,12 @@ def make_handler(
                 self._handle(self._heartbeat)
             elif path == "/api/portfolio/refresh":
                 self._handle(self._portfolio_refresh)
+            elif path == "/api/portfolio/import/preview":
+                self._handle(lambda: preview_portfolio_import(body["text"]))
+            elif path == "/api/portfolio/import":
+                self._handle(lambda: save_portfolio_import(
+                    body["text"], portfolio_job.workbook_path.parent,
+                ))
             elif path == "/api/retirement/forecast":
                 self._handle(lambda: self._retirement_forecast(body))
             elif path == "/api/budget-plan/save":

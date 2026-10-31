@@ -177,9 +177,14 @@ persisted value directly, so it works immediately without signing out.
 Keep LSEG Workspace running while generating reports. The app key is read from
 the environment and is never written to the workbook or cache.
 
-Drop a Wealthsimple activities export into
-`data/activities-export-YYYY-MM-DD.csv`. The tool auto-detects the most recent
-file in `data/`, or accepts an explicit path through `--transactions-csv`.
+Upload a Wealthsimple activities export in the hub under **Journal → Import →
+Portfolio transactions**. It shows the row count, date range, activity types,
+and any skipped rows, then saves the file as
+`data/activities-export-YYYY-MM-DD.csv` (today's date; a same-day upload
+replaces the earlier one). The file is not added to the journal. You can also
+copy the export into `data/` by hand under that name. The tool auto-detects the
+most recent file in `data/`, or accepts an explicit path through
+`--transactions-csv`.
 
 Copy `src/portfolio_tracker/symbols.example.json` to `data/symbols.json` to
 configure ticker exceptions for your transactions: bare U.S. listings,
@@ -328,7 +333,10 @@ Excel; close it there first if it's open.
   columns and pick which account it belongs to; that mapping is remembered by
   the file's header row and reused automatically afterward. Already-imported
   rows (matched by account + date + amount + description) are skipped and
-  reported, so re-uploading an overlapping statement is safe.
+  reported, so re-uploading an overlapping statement is safe. A separate
+  **Portfolio transactions** box on the same sub-tab takes the Wealthsimple
+  activities export for the Portfolio tab (see
+  [Optional: live portfolio data](#optional-live-portfolio-data)).
 - **Review** — a sortable, filterable list of imported transactions. Rows
   matching a learned rule arrive pre-filled with a suggested category, marked
   "Suggested" until you confirm or edit them. Confirming a category reinforces

@@ -73,7 +73,8 @@ NOFACE has five tabs along the top of the window:
   it. Your **Documents → NOFACE** folder is kept so you don't lose your data.
 - **Live investment prices:** The Portfolio tab gets its market prices from
   LSEG Workspace, a paid financial data service, and reads your transactions
-  from a Wealthsimple activities export. Without these, the Portfolio tab
+  from a Wealthsimple activities export, which you upload under **Journal →
+  Import → Portfolio transactions**. Without these, the Portfolio tab
   won't have data to show; the other tabs work normally. Setup steps are in
   the [developer guide](app/DEVELOPMENT.md#optional-live-portfolio-data).
 

@@ -1,11 +1,7 @@
 from __future__ import annotations
 
 import json
-import threading
-import urllib.error
-import urllib.request
 from datetime import datetime
-from http.server import ThreadingHTTPServer
 
 import pytest
 from openpyxl import Workbook
@@ -14,6 +10,8 @@ from finance_hub.budget_api import BudgetPayloadCache
 from finance_hub.idle_monitor import IdleMonitor
 from finance_hub.portfolio_api import PortfolioRefreshJob
 from finance_hub.server import make_handler
+
+from .http_server_fixture import request_json as _request, serve
 
 
 def _workbook(path):
@@ -71,26 +69,8 @@ def retirement_server(tmp_path):
         IdleMonitor(timeout_seconds=60),
         workbook_path,
     )
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    thread.start()
-    try:
-        yield f"http://127.0.0.1:{httpd.server_address[1]}", payload_path
-    finally:
-        httpd.shutdown()
-        httpd.server_close()
-
-
-def _request(base_url, method, path, body=None):
-    data = json.dumps(body).encode("utf-8") if body is not None else None
-    request = urllib.request.Request(base_url + path, data=data, method=method)
-    if data is not None:
-        request.add_header("Content-Type", "application/json")
-    try:
-        with urllib.request.urlopen(request) as response:
-            return response.status, json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        return exc.code, json.loads(exc.read().decode("utf-8"))
+    with serve(handler) as base_url:
+        yield base_url, payload_path
 
 
 def _forecast_body():

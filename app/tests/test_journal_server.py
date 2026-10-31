@@ -12,7 +12,6 @@ import json
 import threading
 import urllib.error
 import urllib.request
-from http.server import ThreadingHTTPServer
 
 import pytest
 
@@ -24,6 +23,7 @@ from journal_entry.app import JournalApp
 
 from .journal_fixture import build_fixture_workbook
 from .budget_plan_fixture import build_budget_plan_fixture
+from .http_server_fixture import request_json as _request, serve
 
 _ACCOUNTS = ["Cash", "Rewards Card", "Food", "Salary"]
 _CLOSE_ACCOUNTS = [
@@ -50,15 +50,10 @@ def running_budget_plan_server(tmp_path):
         app, cache, PortfolioRefreshJob(tmp_path / "portfolio.xlsx", payload),
         payload, IdleMonitor(timeout_seconds=60), workbook_path,
     )
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    thread.start()
     try:
-        yield f"http://127.0.0.1:{httpd.server_address[1]}", workbook_path, cache
+        with serve(handler) as base_url:
+            yield base_url, workbook_path, cache
     finally:
-        httpd.shutdown()
-        httpd.server_close()
-        thread.join()
         app.close()
 
 
@@ -188,32 +183,26 @@ def test_budget_plan_payload_uses_cache_and_reflects_saves_without_staleness(tmp
         tmp_path / "portfolio.json", IdleMonitor(timeout_seconds=60), workbook_path,
         budget_plan_cache=plan_cache,
     )
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    thread.start()
-    base_url = f"http://127.0.0.1:{httpd.server_address[1]}"
     try:
-        status, before = _request(base_url, "GET", "/api/budget-plan/payload?year=2026")
-        assert status == 200
-        assert before["cells"]["Salary"]["2026-01"]["saved"] == 900
+        with serve(handler) as base_url:
+            status, before = _request(base_url, "GET", "/api/budget-plan/payload?year=2026")
+            assert status == 200
+            assert before["cells"]["Salary"]["2026-01"]["saved"] == 900
 
-        status, _ = _request(base_url, "GET", "/api/budget-plan/payload?year=2026")
-        assert status == 200
-        assert len(calls) == 1  # second GET reused the cached parse
+            status, _ = _request(base_url, "GET", "/api/budget-plan/payload?year=2026")
+            assert status == 200
+            assert len(calls) == 1  # second GET reused the cached parse
 
-        status, result = _request(base_url, "POST", "/api/budget-plan/save", {"updates": [
-            {"category": "Salary", "month": "2026-01", "value": 975.25},
-        ]})
-        assert (status, result) == (200, {"ok": True})
+            status, result = _request(base_url, "POST", "/api/budget-plan/save", {"updates": [
+                {"category": "Salary", "month": "2026-01", "value": 975.25},
+            ]})
+            assert (status, result) == (200, {"ok": True})
 
-        status, after = _request(base_url, "GET", "/api/budget-plan/payload?year=2026")
-        assert status == 200
-        assert after["cells"]["Salary"]["2026-01"]["saved"] == 975.25
-        assert len(calls) == 2  # save invalidated the cache
+            status, after = _request(base_url, "GET", "/api/budget-plan/payload?year=2026")
+            assert status == 200
+            assert after["cells"]["Salary"]["2026-01"]["saved"] == 975.25
+            assert len(calls) == 2  # save invalidated the cache
     finally:
-        httpd.shutdown()
-        httpd.server_close()
-        thread.join()
         app.close()
 
 
@@ -246,11 +235,7 @@ def test_budget_plan_cache_is_invalidated_by_journal_writes_too(tmp_path, monkey
         tmp_path / "Personal Budget.xlsx",
         budget_plan_cache=plan_cache,
     )
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    thread.start()
-    base_url = f"http://127.0.0.1:{httpd.server_address[1]}"
-    try:
+    with serve(handler) as base_url:
         status, _ = _request(base_url, "POST", "/api/post", {"posting_date": "2026-08-30"})
         assert status == 200
         status, _ = _request(base_url, "POST", "/api/journal/row", {
@@ -264,10 +249,6 @@ def test_budget_plan_cache_is_invalidated_by_journal_writes_too(tmp_path, monkey
         ]})
         assert (status, result) == (200, {"ok": True})
         assert len(invalidations) == 3
-    finally:
-        httpd.shutdown()
-        httpd.server_close()
-        thread.join()
 
 
 @pytest.mark.parametrize("journal_method", ["_post", "_update_journal_row"])
@@ -340,15 +321,10 @@ def running_server(tmp_path):
         IdleMonitor(timeout_seconds=60),
         workbook_path,
     )
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    thread.start()
-    base_url = f"http://127.0.0.1:{httpd.server_address[1]}"
     try:
-        yield base_url, journal_app
+        with serve(handler) as base_url:
+            yield base_url, journal_app
     finally:
-        httpd.shutdown()
-        httpd.server_close()
         journal_app.close()
 
 
@@ -372,28 +348,11 @@ def running_close_server(tmp_path):
         IdleMonitor(timeout_seconds=60),
         workbook_path,
     )
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    thread.start()
-    base_url = f"http://127.0.0.1:{httpd.server_address[1]}"
     try:
-        yield base_url, journal_app
+        with serve(handler) as base_url:
+            yield base_url, journal_app
     finally:
-        httpd.shutdown()
-        httpd.server_close()
         journal_app.close()
-
-
-def _request(base_url, method, path, body=None):
-    data = json.dumps(body).encode("utf-8") if body is not None else None
-    req = urllib.request.Request(base_url + path, data=data, method=method)
-    if data is not None:
-        req.add_header("Content-Type", "application/json")
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return resp.status, json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        return exc.code, json.loads(exc.read().decode("utf-8"))
 
 
 def test_root_serves_the_shell_html(running_server):
@@ -456,11 +415,7 @@ def test_budget_caches_are_invalidated_after_post_and_successful_correction(tmp_
         IdleMonitor(timeout_seconds=60),
         tmp_path / "Personal Budget.xlsx",
     )
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    thread.start()
-    base_url = f"http://127.0.0.1:{httpd.server_address[1]}"
-    try:
+    with serve(handler) as base_url:
         status, _ = _request(
             base_url, "POST", "/api/post", {"posting_date": "2026-08-30"}
         )
@@ -476,9 +431,6 @@ def test_budget_caches_are_invalidated_after_post_and_successful_correction(tmp_
         })
         assert status == 200
         assert cache.invalidations == 2
-    finally:
-        httpd.shutdown()
-        httpd.server_close()
 
 
 def test_import_flow_via_http(running_server):
@@ -556,6 +508,36 @@ def test_portfolio_status_starts_idle(running_server):
     assert status == 200
     assert data["state"] == "idle"
     assert data["log"] == []
+
+
+_WEALTHSIMPLE_CSV = (
+    "transaction_date,account_id,account_type,activity_type,activity_sub_type,"
+    "symbol,currency,quantity,unit_price,commission,net_cash_amount\n"
+    "2024-01-04,ACC1,TFSA,Trade,BUY,ZSP,CAD,58,68.65,0,-3981.7\n"
+)
+
+
+def test_portfolio_import_preview_and_save(running_server, tmp_path):
+    base_url, _ = running_server
+    status, data = _request(base_url, "POST", "/api/portfolio/import/preview",
+                            {"text": _WEALTHSIMPLE_CSV})
+    assert status == 200
+    assert data["rows"] == 1
+    assert not list(tmp_path.glob("activities-export-*.csv"))
+
+    status, data = _request(base_url, "POST", "/api/portfolio/import",
+                            {"text": _WEALTHSIMPLE_CSV})
+    assert status == 200
+    # Saved next to the portfolio workbook, where the pipeline looks.
+    assert (tmp_path / data["saved_as"]).read_text(encoding="utf-8") == _WEALTHSIMPLE_CSV
+
+
+def test_portfolio_import_rejects_a_bank_csv(running_server):
+    base_url, _ = running_server
+    status, data = _request(base_url, "POST", "/api/portfolio/import/preview",
+                            {"text": "Date,Description,Amount\n2024-01-01,Coffee,-4\n"})
+    assert status == 400
+    assert "Wealthsimple" in data["error"]
 
 
 def test_month_close_get_preview_stage_and_post_date_guard(running_close_server):
