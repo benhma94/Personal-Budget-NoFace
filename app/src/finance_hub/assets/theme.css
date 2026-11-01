@@ -54,6 +54,19 @@ body {
 .toast.error { border-color: var(--red); color: var(--red); }
 .toast.ok { border-color: var(--mint); color: var(--mint); }
 
+/* Account picker menu drawn by combobox.js (Journal + Budget). The input rule
+   needs the extra attribute selector to outrank each view's input
+   `background` shorthand, which would otherwise wipe out the chevron. */
+.hub-view input[type=text][data-combo] {
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238e9bb1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+.combo-menu { position: fixed; z-index: 40; max-height: 260px; overflow-y: auto; max-width: 420px; padding: 4px; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.35); font-size: 13px; }
+.combo-item { padding: 7px 10px; border-radius: 6px; color: var(--text); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.combo-item.active { background: var(--line); }
+.combo-empty { padding: 7px 10px; color: var(--muted); }
+
 /* Small laptops (incl. high-DPI scaling that shrinks the CSS viewport):
    tighten the chrome so content isn't pushed below the fold. */
 @media (max-width: 1440px), (max-height: 820px) {

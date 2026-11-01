@@ -83,7 +83,7 @@
 .view-budget .drill-link { border: 0; border-bottom: 1px dotted currentColor; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 
 .view-budget .tx-backdrop { position: fixed; inset: 0; z-index: 30; background: rgba(4,8,15,.68); }
-.view-budget .tx-drawer { position: absolute; top: 0; right: 0; width: min(960px,94vw); height: 100%; overflow: hidden; display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--line); box-shadow: -18px 0 45px rgba(0,0,0,.35); }
+.view-budget .tx-drawer { position: absolute; top: 0; right: 0; width: min(1100px,96vw); height: 100%; overflow: hidden; display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--line); box-shadow: -18px 0 45px rgba(0,0,0,.35); }
 .view-budget .tx-head { display: flex; justify-content: space-between; gap: 16px; padding: 22px 24px 16px; border-bottom: 1px solid var(--line); }
 .view-budget .tx-head h2 { margin: 2px 0 3px; font-size: 25px; }
 .view-budget .tx-summary, .view-budget .tx-error, .view-budget .tx-footer { color: var(--muted); font-size: 12px; }
@@ -96,7 +96,9 @@
 .view-budget .tx-table-wrap { flex: 1; overflow: auto; padding: 0 24px; }
 .view-budget .tx-table-wrap th { top: 0; }
 .view-budget .tx-table-wrap td { vertical-align: top; }
-.view-budget .tx-table-wrap td.tx-note { white-space: normal; min-width: 180px; }
+.view-budget .tx-table-wrap td.tx-note { white-space: normal; min-width: 140px; }
+/* Debit/Credit wrap at spaces so long account names don't force the table wider than the drawer. */
+.view-budget .tx-table-wrap td:nth-child(3), .view-budget .tx-table-wrap td:nth-child(4) { white-space: normal; min-width: 120px; }
 .view-budget .tx-action { padding: 4px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
 .view-budget .tx-action:hover { border-color: var(--blue); }
 .view-budget .tx-action.primary { border-color: var(--blue); color: var(--blue); }
@@ -104,7 +106,9 @@
 .view-budget .tx-action:disabled { opacity: .45; cursor: default; }
 .view-budget .tx-edit input, .view-budget .tx-edit select { width: 100%; min-width: 0; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); color: var(--text); color-scheme: dark; font: inherit; font-size: 12px; }
 .view-budget .tx-edit .tx-edit-amount { width: 100px; text-align: right; }
-.view-budget .tx-edit-actions { display: flex; gap: 5px; }
+/* Stacked so the actions column stays one button wide while editing. */
+.view-budget .tx-edit-actions { display: flex; flex-direction: column; gap: 5px; }
+.view-budget .tx-edit-actions .tx-action { width: 100%; }
 .view-budget .tx-hint { color: var(--gold); font-size: 12px; white-space: normal; }
 .view-budget .tx-footer { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 14px 24px; border-top: 1px solid var(--line); }
 .view-budget .tx-footer button { margin-left: 7px; padding: 7px 11px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel2); color: var(--text); cursor: pointer; }

@@ -310,11 +310,12 @@ window.HubBudget = (() => {
     }
   }
 
-  // Text box + datalist so the suggestions narrow as the user types. The box
-  // starts with the row's own name, even one the Ledger doesn't list (a
-  // hand-typed Excel row), so opening the form doesn't silently change it.
+  // Text box + datalist (drawn by combobox.js) so the suggestions narrow as
+  // the user types. The box starts with the row's own name, even one the
+  // Ledger doesn't list (a hand-typed Excel row), so opening the form doesn't
+  // silently change it.
   function accountInput(cls,value){
-    return `<input type="text" class="${cls}" list="tx-account-list" autocomplete="off" placeholder="Type to search accounts" value="${escapeHtml(value||'')}">`;
+    return `<input type="text" class="${cls}" data-combo="tx-account-list" autocomplete="off" placeholder="Type to search accounts" value="${escapeHtml(value||'')}">`;
   }
 
   function drillRowHtml(row){
@@ -329,7 +330,7 @@ window.HubBudget = (() => {
       <td class="right"><input type="number" step="0.01" class="tx-edit-amount" value="${txEdit.amount??''}"></td>
       <td></td>
       <td class="tx-note"><input type="text" class="tx-edit-note" value="${escapeHtml(txEdit.note||'')}"></td>
-      <td class="tx-edit-actions"><button type="button" class="tx-action primary" data-tx-save>Save</button><button type="button" class="tx-action" data-tx-cancel>Cancel</button><button type="button" class="tx-action danger" data-tx-delete>Delete</button></td>
+      <td><div class="tx-edit-actions"><button type="button" class="tx-action primary" data-tx-save>Save</button><button type="button" class="tx-action" data-tx-cancel>Cancel</button><button type="button" class="tx-action danger" data-tx-delete>Delete</button></div></td>
     </tr>${hint}`;
   }
 
@@ -485,9 +486,6 @@ window.HubBudget = (() => {
       if(event.key!=='Escape'||$('tx-backdrop').hidden)return;
       if(txEdit){if(!txSaving)cancelEdit()}else closeDrill();
     });
-    // Select the current name on focus so typing replaces it; otherwise the
-    // datalist only offers suggestions matching the text already in the box.
-    $('tx-body').addEventListener('focusin',event=>{if(event.target.matches('input[list="tx-account-list"]'))event.target.select()});
     $('tx-body').addEventListener('click',event=>{
       const editButton=event.target.closest('[data-tx-edit]');
       if(editButton){if(!txSaving)startEdit(+editButton.dataset.txEdit);return}

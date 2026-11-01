@@ -25,7 +25,7 @@ def _read(name: str) -> str:
 
 def test_every_declared_asset_file_exists():
     for name in (
-        "shell.html", "theme.css", "hub.js",
+        "shell.html", "theme.css", "hub.js", "combobox.js",
         "budget.css", "budget.js",
         "budget-plan.css", "budget-plan.js",
         "portfolio.css", "portfolio.js",
@@ -181,6 +181,9 @@ def test_budget_transaction_drawer_is_period_aware_and_edits_journal_rows():
     assert "any_row:true" in js
     assert "expected:{" in js
     assert "[deleted]" in js
+    # Edit buttons stack in a div (not a flex <td>) so the row fits the drawer.
+    assert '<td><div class="tx-edit-actions">' in js
+    assert ".view-budget .tx-edit-actions { display: flex; flex-direction: column;" in _read("budget.css")
     for element_id in (
         "tx-backdrop", "tx-start", "tx-end", "tx-category", "tx-account",
         "tx-search", "tx-body", "tx-prev", "tx-next",
