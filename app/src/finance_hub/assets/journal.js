@@ -115,11 +115,12 @@ async function loadBatches(){
   State.batches=await api('GET','/api/batches');
 }
 
-// Account pickers are text boxes tied to one shared <datalist> (appended to
-// every view by render()), so the suggestion list narrows as the user types.
-// A typed name isn't guaranteed to be an account; callers check isAccount().
+// Account pickers are text boxes that combobox.js ties to one shared
+// <datalist> (appended to every view by render()), so the suggestion list
+// narrows as the user types. A typed name isn't guaranteed to be an account;
+// callers check isAccount().
 function accountInput(attrs,value){
-  return `<input type="text" ${attrs} list="jn-account-list" autocomplete="off" placeholder="Type to search accounts" value="${esc(value)}">`;
+  return `<input type="text" ${attrs} data-combo="jn-account-list" autocomplete="off" placeholder="Type to search accounts" value="${esc(value)}">`;
 }
 function accountDatalist(){
   return `<datalist id="jn-account-list">${State.accounts.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>`;
@@ -199,7 +200,7 @@ function showMappingForm(filename,text,sniff,existing){
       <h2>${existing?'Edit layout':'New format detected'} — ${esc(filename)}</h2>
       <div class="hint">Headers: ${headers.map(esc).join(', ')}</div>
       <div class="mapping-grid">
-        <div class="field"><label>This file is for</label><input type="text" id="m-account" list="m-account-list" autocomplete="off" placeholder="Type to search accounts" value="${esc(existing?existing.default_account:'')}">
+        <div class="field"><label>This file is for</label><input type="text" id="m-account" data-combo="m-account-list" autocomplete="off" placeholder="Type to search accounts" value="${esc(existing?existing.default_account:'')}">
           <datalist id="m-account-list">${State.accounts.map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
         <div class="field"><label>Date column</label><select id="m-date">${headers.map(h=>opt(h,dateCol)).join('')}</select></div>
         <div class="field"><label>Date format</label>
@@ -990,9 +991,6 @@ async function setTab(tab){
 }
 
 $$('#tabs button').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
-// Select the current name on focus so typing replaces it; otherwise the
-// datalist only offers suggestions matching the text already in the box.
-$('#view').addEventListener('focusin',e=>{if(e.target.matches('input[list="jn-account-list"]'))e.target.select()});
 
 (async()=>{
   try{

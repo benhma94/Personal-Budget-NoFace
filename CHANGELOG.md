@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.8 — 2026-11-01
+
+Version 0.1.7 → 0.1.8.
+
+- feat: Implement combobox for account pickers in Journal and Budget tabs with styled dropdown
+
+Drafted from commit messages by the publish workflow.
+
 ## 0.1.7 — 2026-10-31
 
 Version 0.1.6 → 0.1.7.

@@ -47,7 +47,7 @@ _ASSET_MIME = {
 # URL, so there's no path-traversal surface to worry about.
 _ASSETS = {
     "shell.html",
-    "theme.css", "hub.js",
+    "theme.css", "hub.js", "combobox.js",
     "budget.css", "budget.js",
     "budget-plan.css", "budget-plan.js",
     "retirement.css", "retirement.js",
