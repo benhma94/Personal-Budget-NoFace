@@ -349,7 +349,7 @@ window.HubBudget = (() => {
     const categories=D.monthly[D.latest_period].categories.map(row=>row.category).sort();
     $('tx-category').innerHTML=['<option value="">All categories</option>','<option value="__expense">All expenses</option>','<option value="__income">All operating income</option>','<option value="__investment">Investment gain / loss</option>',...categories.map(value=>`<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)].join('');
     const balance=D.balances[D.latest_period],accounts=[...balance.assets,...balance.liabilities].map(row=>row.account).sort();
-    $('tx-account').innerHTML=['<option value="">All accounts</option>',...accounts.map(value=>`<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)].join('');
+    $('tx-filter-account-list').innerHTML=accounts.map(value=>`<option value="${escapeHtml(value)}">`).join('');
   }
 
   async function requestJson(url,options){
@@ -508,7 +508,10 @@ window.HubBudget = (() => {
       drill.offset=0;loadDrill();
     });
     $('tx-account').addEventListener('change',event=>{
-      drill.account=event.target.value;
+      // Empty means all accounts; half-typed text reverts rather than filtering to nothing.
+      const value=event.target.value.trim();
+      if(value&&!Array.from($('tx-filter-account-list').options,option=>option.value).includes(value)){event.target.value=drill.account;return}
+      drill.account=value;
       if(drill.account){drill.category='';drill.kind='';$('tx-category').value=''}
       drill.offset=0;loadDrill();
     });

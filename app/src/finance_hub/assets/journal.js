@@ -383,7 +383,6 @@ function renderReview(){
 }
 
 function renderReviewFilters(){
-  const accountFilterOptions=['<option value="">All accounts</option>',...State.accounts.map(a=>`<option value="${esc(a)}" ${State.reviewFilter.account===a?'selected':''}>${esc(a)}</option>`)].join('');
   return `
   <div class="panel">
     <div class="row" style="justify-content:space-between">
@@ -395,7 +394,7 @@ function renderReviewFilters(){
           <option value="posted" ${State.reviewFilter.status==='posted'?'selected':''}>Posted</option>
           <option value="" ${State.reviewFilter.status===''?'selected':''}>All</option>
         </select>
-        <select id="rv-account">${accountFilterOptions}</select>
+        <input type="text" id="rv-account" data-combo="jn-account-list" autocomplete="off" placeholder="All accounts" value="${esc(State.reviewFilter.account)}">
         <input type="search" id="rv-search" placeholder="Search description or note" value="${esc(State.reviewFilter.q)}">
       </div>
       <div class="row">
@@ -457,7 +456,12 @@ function wireReview(){
 
 function wireReviewFilters(){
   $('#rv-status').addEventListener('change',e=>{State.reviewFilter.status=e.target.value;repaintReviewTable()});
-  $('#rv-account').addEventListener('change',e=>{State.reviewFilter.account=e.target.value;repaintReviewTable()});
+  // Empty means all accounts; half-typed text reverts rather than filtering to nothing.
+  $('#rv-account').addEventListener('change',e=>{
+    const v=e.target.value.trim();
+    if(v&&!isAccount(v)){e.target.value=State.reviewFilter.account;return}
+    State.reviewFilter.account=v;repaintReviewTable();
+  });
   $('#rv-search').addEventListener('input',e=>{State.reviewFilter.q=e.target.value;repaintReviewTable()});
   const applyBtn=$('#rv-apply');
   if(applyBtn)applyBtn.addEventListener('click',async()=>{

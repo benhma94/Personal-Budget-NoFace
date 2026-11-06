@@ -137,7 +137,7 @@
         <label>From<input type="date" id="tx-start"></label>
         <label>To<input type="date" id="tx-end"></label>
         <label>Category<select id="tx-category"></select></label>
-        <label>Account<select id="tx-account"></select></label>
+        <label>Account<input type="text" id="tx-account" data-combo="tx-filter-account-list" autocomplete="off" placeholder="All accounts"><datalist id="tx-filter-account-list"></datalist></label>
         <label class="tx-search">Search<input type="search" id="tx-search" placeholder="Date, account, or note"></label>
       </div>
       <div class="tx-error" id="tx-error"></div>
