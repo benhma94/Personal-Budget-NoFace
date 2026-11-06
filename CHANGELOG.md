@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.9 — 2026-11-06
+
+Version 0.1.8 → 0.1.9.
+
+- feat: Convert account filters to themed combobox inputs in Journal and Budget tabs
+
+Drafted from commit messages by the publish workflow.
+
 ## 0.1.8 — 2026-11-01
 
 Version 0.1.7 → 0.1.8.
