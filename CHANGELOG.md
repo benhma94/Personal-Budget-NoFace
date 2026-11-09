@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.10 — 2026-11-09
+
+Version 0.1.9 → 0.1.10.
+
+- fix: Reconcile "Where spending went" total with Spending card
+
+Drafted from commit messages by the publish workflow.
+
 ## 0.1.9 — 2026-11-06
 
 Version 0.1.8 → 0.1.9.

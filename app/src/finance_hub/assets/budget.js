@@ -159,8 +159,15 @@ window.HubBudget = (() => {
   function renderSpending(){
     const rows=viewData.categories.filter(row=>row.kind==='expense'&&row.actual>0).sort((a,b)=>b.actual-a.actual);
     const total=rows.reduce((sum,row)=>sum+row.actual,0),colors=rows.map(row=>spendingColor(row.category));
-    $('spend-total').textContent=money(total);
-    $('spending-legend').innerHTML=rows.map((row,index)=>`<button type="button" class="legend-item" data-drill-category="${escapeHtml(row.category)}"><span class="legend-swatch" style="background:${colors[index]}"></span><span>${escapeHtml(row.category)}</span><span class="legend-value">${money(row.actual)}</span></button>`).join('')||'<div class="empty">No positive spending</div>';
+    // A doughnut can't draw negative slices, so categories whose refunds exceed
+    // their charges are left out of the chart and listed separately; the header
+    // nets them back so it ties to the Spending card.
+    const creditRows=viewData.categories.filter(row=>row.kind==='expense'&&row.actual<0).sort((a,b)=>a.actual-b.actual);
+    const credits=creditRows.reduce((sum,row)=>sum+row.actual,0);
+    $('spend-total').textContent=credits<0?`${money(total)} gross · ${money(credits)} net credits = ${money(total+credits)}`:money(total);
+    const legendItem=(row,swatch)=>`<button type="button" class="legend-item" data-drill-category="${escapeHtml(row.category)}"><span class="legend-swatch" style="${swatch}"></span><span>${escapeHtml(row.category)}</span><span class="legend-value">${money(row.actual)}</span></button>`;
+    $('spending-legend').innerHTML=(rows.map((row,index)=>legendItem(row,`background:${colors[index]}`)).join('')||'<div class="empty">No positive spending</div>')
+      +creditRows.map(row=>legendItem(row,'background:transparent;border:1px solid var(--muted)')).join('');
     chart('spending-chart',{type:'doughnut',data:{labels:rows.map(row=>row.category),datasets:[{data:rows.map(row=>row.actual),backgroundColor:colors,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',onClick:(_event,elements)=>{if(elements.length)openCategoryDrill(rows[elements[0].index].category,activeKeys)},plugins:{legend:{display:false},tooltip:{callbacks:{label:context=>{const share=total?context.parsed/total*100:0;return `${context.label}: ${money(context.parsed)} (${share.toFixed(1)}%)`}}}}}});
   }
 
